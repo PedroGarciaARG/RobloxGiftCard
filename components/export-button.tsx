@@ -63,9 +63,9 @@ export function ExportButton({ purchases, sales }: ExportButtonProps) {
   }
 
   return (
-    <Button variant="outline" onClick={exportToCSV}>
-      <Download className="h-4 w-4 mr-2" />
-      Exportar CSV
+    <Button variant="outline" onClick={exportToCSV} className="h-10 sm:h-9 text-sm bg-transparent">
+      <Download className="h-4 w-4 sm:mr-2" />
+      <span className="hidden sm:inline">Exportar CSV</span>
     </Button>
   )
 }

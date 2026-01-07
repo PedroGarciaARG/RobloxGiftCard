@@ -31,7 +31,7 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
   const fetchRate = async () => {
     setIsLoading(true)
     try {
-      const rate = await getExchangeRate(date)
+      const rate = await getExchangeRate()
       setExchangeRate(rate)
       setCustomRate(rate.toString())
     } catch (error) {
@@ -66,7 +66,6 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
       onAddPurchase(purchase)
     }
 
-    // Reset form
     setQuantity(1)
     setExchangeRate(null)
     setCustomRate("")
@@ -81,16 +80,18 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Registrar Compra</CardTitle>
+      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 sm:pb-4">
+        <CardTitle className="text-lg sm:text-xl">Registrar Compra</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="cardType">Tipo de Tarjeta</Label>
+              <Label htmlFor="cardType" className="text-sm">
+                Tipo de Tarjeta
+              </Label>
               <Select value={cardType} onValueChange={(v) => setCardType(v as "400" | "800")}>
-                <SelectTrigger>
+                <SelectTrigger className="h-10 sm:h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -101,23 +102,34 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="quantity">Cantidad</Label>
+              <Label htmlFor="quantity" className="text-sm">
+                Cantidad
+              </Label>
               <Input
                 id="quantity"
                 type="number"
                 min={1}
                 value={quantity}
                 onChange={(e) => setQuantity(Number.parseInt(e.target.value) || 1)}
+                className="h-10 sm:h-9"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">Fecha de Compra</Label>
-              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <Label htmlFor="date" className="text-sm">
+                Fecha de Compra
+              </Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-10 sm:h-9"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label>Cotización USD/ARS</Label>
+              <Label className="text-sm">Cotización USD/ARS</Label>
               <div className="flex gap-2">
                 <Input
                   placeholder="Cotización"
@@ -125,8 +137,15 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
                   onChange={(e) => setCustomRate(e.target.value)}
                   type="number"
                   step="0.01"
+                  className="h-10 sm:h-9"
                 />
-                <Button type="button" variant="outline" onClick={fetchRate} disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={fetchRate}
+                  disabled={isLoading}
+                  className="h-10 sm:h-9 px-3 shrink-0 bg-transparent"
+                >
                   {isLoading ? "..." : "Obtener"}
                 </Button>
               </div>
@@ -134,18 +153,22 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
           </div>
 
           {estimatedCost > 0 && (
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">Costo estimado:</p>
-              <p className="text-xl font-bold">
+            <div className="p-3 sm:p-4 bg-muted rounded-lg">
+              <p className="text-xs sm:text-sm text-muted-foreground">Costo estimado:</p>
+              <p className="text-lg sm:text-xl font-bold">
                 ${estimatedCost.toLocaleString("es-AR", { maximumFractionDigits: 2 })} ARS
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 ({quantity} x ${priceUSD} USD x ${customRate || exchangeRate})
               </p>
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={!customRate && !exchangeRate}>
+          <Button
+            type="submit"
+            className="w-full h-11 sm:h-10 text-base sm:text-sm"
+            disabled={!customRate && !exchangeRate}
+          >
             Registrar Compra
           </Button>
         </form>

@@ -70,20 +70,26 @@ export function GiftCardManager() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Roblox Gift Card Manager</h1>
-        <p className="text-muted-foreground">Gestiona tus compras y ventas de gift cards de Roblox</p>
+    <div className="container mx-auto py-4 px-3 sm:py-8 sm:px-4 max-w-6xl">
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Roblox Gift Cards</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Balance de compras y ventas</p>
       </header>
 
       <BalanceOverview purchases={purchases} sales={sales} />
 
-      <Tabs defaultValue="purchases" className="mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <TabsList>
-            <TabsTrigger value="purchases">Compras</TabsTrigger>
-            <TabsTrigger value="sales">Ventas</TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
+      <Tabs defaultValue="purchases" className="mt-6 sm:mt-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+            <TabsTrigger value="purchases" className="text-xs sm:text-sm">
+              Compras
+            </TabsTrigger>
+            <TabsTrigger value="sales" className="text-xs sm:text-sm">
+              Ventas
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm">
+              Historial
+            </TabsTrigger>
           </TabsList>
           <ExportButton purchases={purchases} sales={sales} />
         </div>
