@@ -20,3 +20,10 @@ export interface Sale {
   quantity: number
   createdAt: string
 }
+
+export interface SalePrices {
+  mlPrice400: number
+  mlPrice800: number
+  mlCommission400: number
+  mlCommission800: number
+}

@@ -9,31 +9,30 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getExchangeRate } from "@/lib/exchange-rate"
+import { getTodayString } from "@/lib/date-utils"
 import type { Purchase } from "@/lib/types"
 
 interface PurchaseFormProps {
-  onAddPurchase: (purchase: Purchase) => void
+  onAddPurchase: (purchase: Purchase[]) => void
+  cardPrices: { [key: number]: number }
 }
 
-const CARD_PRICES_USD = {
-  400: 5.17,
-  800: 10.34,
-}
-
-export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
+export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
   const [cardType, setCardType] = useState<"400" | "800">("400")
   const [quantity, setQuantity] = useState(1)
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  const [date, setDate] = useState(getTodayString())
   const [isLoading, setIsLoading] = useState(false)
   const [exchangeRate, setExchangeRate] = useState<number | null>(null)
   const [customRate, setCustomRate] = useState("")
+  const [customPriceUSD, setCustomPriceUSD] = useState("")
 
   const fetchRate = async () => {
     setIsLoading(true)
     try {
-      const rate = await getExchangeRate()
+      const rate = await getExchangeRate(date)
       setExchangeRate(rate)
       setCustomRate(rate.toString())
+      console.log("[v0] Fetched rate for date", date, ":", rate)
     } catch (error) {
       console.error("Error fetching rate:", error)
     }
@@ -50,9 +49,10 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
     }
 
     const cardTypeNum = Number.parseInt(cardType) as 400 | 800
-    const priceUSD = CARD_PRICES_USD[cardTypeNum]
+    const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : cardPrices[cardTypeNum]
     const costARS = priceUSD * rate
 
+    const newPurchases: Purchase[] = []
     for (let i = 0; i < quantity; i++) {
       const purchase: Purchase = {
         id: crypto.randomUUID(),
@@ -63,20 +63,29 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
         purchaseDate: date,
         createdAt: new Date().toISOString(),
       }
-      onAddPurchase(purchase)
+      newPurchases.push(purchase)
     }
+
+    await onAddPurchase(newPurchases)
 
     setQuantity(1)
     setExchangeRate(null)
     setCustomRate("")
+    setCustomPriceUSD("")
   }
 
-  const priceUSD = CARD_PRICES_USD[Number.parseInt(cardType) as 400 | 800]
+  const cardTypeNum = Number.parseInt(cardType) as 400 | 800
+  const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : cardPrices[cardTypeNum]
   const estimatedCost = customRate
     ? priceUSD * Number.parseFloat(customRate) * quantity
     : exchangeRate
       ? priceUSD * exchangeRate * quantity
       : 0
+
+  const handleCardTypeChange = (v: "400" | "800") => {
+    setCardType(v)
+    setCustomPriceUSD(cardPrices[Number.parseInt(v) as 400 | 800].toString())
+  }
 
   return (
     <Card>
@@ -90,15 +99,30 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
               <Label htmlFor="cardType" className="text-sm">
                 Tipo de Tarjeta
               </Label>
-              <Select value={cardType} onValueChange={(v) => setCardType(v as "400" | "800")}>
+              <Select value={cardType} onValueChange={handleCardTypeChange}>
                 <SelectTrigger className="h-10 sm:h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="400">400 Robux - $5.17 USD</SelectItem>
-                  <SelectItem value="800">800 Robux - $10.34 USD</SelectItem>
+                  <SelectItem value="400">400 Robux</SelectItem>
+                  <SelectItem value="800">800 Robux</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="priceUSD" className="text-sm">
+                Precio USD
+              </Label>
+              <Input
+                id="priceUSD"
+                type="number"
+                step="0.01"
+                placeholder={cardPrices[cardTypeNum].toString()}
+                value={customPriceUSD}
+                onChange={(e) => setCustomPriceUSD(e.target.value)}
+                className="h-10 sm:h-9"
+              />
             </div>
 
             <div className="space-y-2">
@@ -128,7 +152,7 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label className="text-sm">Cotización USD/ARS</Label>
               <div className="flex gap-2">
                 <Input
@@ -149,6 +173,9 @@ export function PurchaseForm({ onAddPurchase }: PurchaseFormProps) {
                   {isLoading ? "..." : "Obtener"}
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Obtiene el valor histórico del dólar blue según la fecha seleccionada
+              </p>
             </div>
           </div>
 

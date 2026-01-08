@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trash2, Pencil, Check, X, Copy } from "lucide-react"
+import { formatLocalDate, compareDates } from "@/lib/date-utils"
 import type { Purchase, Sale } from "@/lib/types"
 
 interface TransactionHistoryProps {
@@ -29,11 +30,9 @@ export function TransactionHistory({
   const [editingSale, setEditingSale] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<Record<string, string>>({})
 
-  const sortedPurchases = [...purchases].sort(
-    (a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime(),
-  )
+  const sortedPurchases = [...purchases].sort((a, b) => compareDates(a.purchaseDate, b.purchaseDate))
 
-  const sortedSales = [...sales].sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime())
+  const sortedSales = [...sales].sort((a, b) => compareDates(a.saleDate, b.saleDate))
 
   const actualSales = sales.filter((s) => s.platform !== "lost")
   const lostCards = sales.filter((s) => s.platform === "lost")
@@ -155,7 +154,7 @@ export function TransactionHistory({
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-sm">{purchase.cardType} Robux</p>
                           <p className="text-xs text-muted-foreground truncate">
-                            {new Date(purchase.purchaseDate).toLocaleDateString("es-AR")} | ${purchase.priceUSD} x{" "}
+                            {formatLocalDate(purchase.purchaseDate)} | ${purchase.priceUSD} x{" "}
                             {purchase.exchangeRate.toFixed(0)}
                           </p>
                         </div>
@@ -240,8 +239,7 @@ export function TransactionHistory({
                               </span>
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(sale.saleDate).toLocaleDateString("es-AR")} | $
-                              {sale.salePrice.toLocaleString("es-AR")}
+                              {formatLocalDate(sale.saleDate)} | ${sale.salePrice.toLocaleString("es-AR")}
                               {sale.commission > 0 && (
                                 <span className="text-red-500"> -{sale.commission.toLocaleString("es-AR")}</span>
                               )}
@@ -333,9 +331,7 @@ export function TransactionHistory({
                                 PERDIDA
                               </span>
                             </p>
-                            <p className="text-xs text-red-600 dark:text-red-400">
-                              {new Date(sale.saleDate).toLocaleDateString("es-AR")}
-                            </p>
+                            <p className="text-xs text-red-600 dark:text-red-400">{formatLocalDate(sale.saleDate)}</p>
                             {sale.cardCode && (
                               <div className="flex items-center gap-1 mt-1">
                                 <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded truncate max-w-[150px]">

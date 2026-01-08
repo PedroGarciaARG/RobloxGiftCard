@@ -9,44 +9,55 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import type { Sale, Purchase } from "@/lib/types"
+import { getTodayString } from "@/lib/date-utils"
+import type { Sale, Purchase, SalePrices } from "@/lib/types"
 
 interface SaleFormProps {
   onAddSale: (sale: Sale) => void
   purchases: Purchase[]
+  sales: Sale[]
+  salePrices: SalePrices
 }
 
-const ML_COMMISSION = {
-  400: 3284.84,
-  800: 6995,
-}
-
-const ML_PRICE = {
-  400: 13999,
-  800: 27999,
-}
-
-export function SaleForm({ onAddSale, purchases }: SaleFormProps) {
+export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormProps) {
   const [cardType, setCardType] = useState<"400" | "800">("400")
   const [quantity, setQuantity] = useState(1)
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  const [date, setDate] = useState(getTodayString())
   const [platform, setPlatform] = useState<"mercadolibre" | "direct" | "lost">("mercadolibre")
   const [customPrice, setCustomPrice] = useState("")
   const [cardCode, setCardCode] = useState("")
 
   const cardTypeNum = Number.parseInt(cardType) as 400 | 800
 
-  const salePrice =
-    platform === "lost" ? 0 : platform === "mercadolibre" ? ML_PRICE[cardTypeNum] : Number.parseFloat(customPrice) || 0
+  const mlPrice = cardTypeNum === 400 ? salePrices.mlPrice400 : salePrices.mlPrice800
+  const mlCommission = cardTypeNum === 400 ? salePrices.mlCommission400 : salePrices.mlCommission800
 
-  const commission = platform === "mercadolibre" ? ML_COMMISSION[cardTypeNum] : 0
+  const salePrice =
+    platform === "lost" ? 0 : platform === "mercadolibre" ? mlPrice : Number.parseFloat(customPrice) || 0
+
+  const commission = platform === "mercadolibre" ? mlCommission : 0
   const netAmount = platform === "lost" ? 0 : salePrice - commission
+
+  const calculateAvailableStock = (type: 400 | 800) => {
+    const purchased = purchases.filter((p) => p.cardType === type).length
+    const sold = sales.filter((s) => s.cardType === type).reduce((sum, s) => sum + s.quantity, 0)
+    return purchased - sold
+  }
+
+  const available400 = calculateAvailableStock(400)
+  const available800 = calculateAvailableStock(800)
+  const currentAvailable = cardTypeNum === 400 ? available400 : available800
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (platform === "direct" && !customPrice) {
       alert("Por favor, ingresa el precio de venta")
+      return
+    }
+
+    if (quantity > currentAvailable) {
+      alert(`No hay suficiente stock. Disponible: ${currentAvailable}`)
       return
     }
 
@@ -71,14 +82,6 @@ export function SaleForm({ onAddSale, purchases }: SaleFormProps) {
     setCardCode("")
   }
 
-  const availableByType = purchases.reduce(
-    (acc, p) => {
-      acc[p.cardType] = (acc[p.cardType] || 0) + 1
-      return acc
-    },
-    {} as Record<number, number>,
-  )
-
   return (
     <Card>
       <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 sm:pb-4">
@@ -96,22 +99,23 @@ export function SaleForm({ onAddSale, purchases }: SaleFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="400">400 Robux (Stock: {availableByType[400] || 0})</SelectItem>
-                  <SelectItem value="800">800 Robux (Stock: {availableByType[800] || 0})</SelectItem>
+                  <SelectItem value="400">400 Robux (Disp: {available400})</SelectItem>
+                  <SelectItem value="800">800 Robux (Disp: {available800})</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="quantity" className="text-sm">
-                Cantidad
+                Cantidad (máx: {currentAvailable})
               </Label>
               <Input
                 id="quantity"
                 type="number"
                 min={1}
+                max={currentAvailable}
                 value={quantity}
-                onChange={(e) => setQuantity(Number.parseInt(e.target.value) || 1)}
+                onChange={(e) => setQuantity(Math.min(Number.parseInt(e.target.value) || 1, currentAvailable))}
                 className="h-10 sm:h-9"
               />
             </div>
@@ -155,9 +159,7 @@ export function SaleForm({ onAddSale, purchases }: SaleFormProps) {
                 <RadioGroupItem value="mercadolibre" id="ml" className="mt-0.5" />
                 <Label htmlFor="ml" className="font-normal cursor-pointer text-sm leading-tight">
                   MercadoLibre{" "}
-                  <span className="text-muted-foreground">
-                    (com: ${ML_COMMISSION[cardTypeNum].toLocaleString("es-AR")})
-                  </span>
+                  <span className="text-muted-foreground">(com: ${mlCommission.toLocaleString("es-AR")})</span>
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
@@ -220,8 +222,13 @@ export function SaleForm({ onAddSale, purchases }: SaleFormProps) {
             type="submit"
             className="w-full h-11 sm:h-10 text-base sm:text-sm"
             variant={platform === "lost" ? "destructive" : "default"}
+            disabled={currentAvailable <= 0}
           >
-            {platform === "lost" ? "Registrar Pérdida" : "Registrar Venta"}
+            {currentAvailable <= 0
+              ? "Sin stock disponible"
+              : platform === "lost"
+                ? "Registrar Pérdida"
+                : "Registrar Venta"}
           </Button>
         </form>
       </CardContent>

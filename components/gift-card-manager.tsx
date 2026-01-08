@@ -1,30 +1,126 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PurchaseForm } from "./purchase-form"
 import { SaleForm } from "./sale-form"
 import { BalanceOverview } from "./balance-overview"
 import { TransactionHistory } from "./transaction-history"
 import { ExportButton } from "./export-button"
-import type { Purchase, Sale } from "@/lib/types"
+import { SettingsPanel } from "./settings-panel"
+import { GoogleSheetsSetup } from "./google-sheets-setup"
+import { saveAllData, loadAllData, getSheetConfig } from "@/lib/google-sheets"
+import type { Purchase, Sale, SalePrices } from "@/lib/types"
+import { RefreshCw, Cloud, CloudOff } from "lucide-react"
+import { Button } from "@/components/ui/button"
+
+const DEFAULT_CARD_PRICES = {
+  400: 5.17,
+  800: 10.34,
+}
+
+const DEFAULT_SALE_PRICES: SalePrices = {
+  mlPrice400: 13999,
+  mlPrice800: 27999,
+  mlCommission400: 3284.84,
+  mlCommission800: 6995,
+}
 
 export function GiftCardManager() {
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [sales, setSales] = useState<Sale[]>([])
+  const [cardPrices, setCardPrices] = useState<{ [key: number]: number }>(DEFAULT_CARD_PRICES)
+  const [salePrices, setSalePrices] = useState<SalePrices>(DEFAULT_SALE_PRICES)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [isConnectedToSheets, setIsConnectedToSheets] = useState(false)
+  const [sheetsUrl, setSheetsUrl] = useState<string | null>(null)
+  const [lastSyncStatus, setLastSyncStatus] = useState<"success" | "error" | null>(null)
 
-  // Load data from localStorage
-  useEffect(() => {
+  const syncToSheets = useCallback(
+    async (
+      newPurchases: Purchase[],
+      newSales: Sale[],
+      newPrices: { [key: number]: number },
+      newSalePrices: SalePrices,
+    ) => {
+      if (!isConnectedToSheets || !sheetsUrl) return
+
+      setIsSyncing(true)
+      try {
+        const success = await saveAllData(sheetsUrl, {
+          purchases: newPurchases,
+          sales: newSales,
+          cardPrices: newPrices,
+          salePrices: newSalePrices,
+        })
+        setLastSyncStatus(success ? "success" : "error")
+        console.log("[v0] Sync to sheets:", success ? "success" : "failed")
+      } catch (error) {
+        console.error("[v0] Error syncing to sheets:", error)
+        setLastSyncStatus("error")
+      } finally {
+        setIsSyncing(false)
+      }
+    },
+    [isConnectedToSheets, sheetsUrl],
+  )
+
+  const loadFromSheets = useCallback(async (webAppUrl: string) => {
+    setIsSyncing(true)
+    try {
+      const data = await loadAllData(webAppUrl)
+      if (data) {
+        setPurchases(data.purchases || [])
+        setSales(data.sales || [])
+        if (data.cardPrices && Object.keys(data.cardPrices).length > 0) {
+          const prices: { [key: number]: number } = {}
+          Object.entries(data.cardPrices).forEach(([key, value]) => {
+            prices[Number(key)] = Number(value)
+          })
+          setCardPrices(prices)
+        }
+        if (data.salePrices) {
+          setSalePrices(data.salePrices)
+        }
+        setLastSyncStatus("success")
+        console.log("[v0] Loaded from sheets:", data)
+      } else {
+        loadFromLocalStorage()
+      }
+    } catch (error) {
+      console.error("[v0] Error loading from sheets:", error)
+      setLastSyncStatus("error")
+      loadFromLocalStorage()
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [])
+
+  const loadFromLocalStorage = () => {
     const savedPurchases = localStorage.getItem("roblox-purchases")
     const savedSales = localStorage.getItem("roblox-sales")
+    const savedPrices = localStorage.getItem("roblox-card-prices")
+    const savedSalePrices = localStorage.getItem("roblox-sale-prices")
 
     if (savedPurchases) setPurchases(JSON.parse(savedPurchases))
     if (savedSales) setSales(JSON.parse(savedSales))
-    setIsLoaded(true)
-  }, [])
+    if (savedPrices) setCardPrices(JSON.parse(savedPrices))
+    if (savedSalePrices) setSalePrices(JSON.parse(savedSalePrices))
+  }
 
-  // Save to localStorage when data changes
+  useEffect(() => {
+    const config = getSheetConfig()
+    if (config?.webAppUrl) {
+      setIsConnectedToSheets(true)
+      setSheetsUrl(config.webAppUrl)
+      loadFromSheets(config.webAppUrl).then(() => setIsLoaded(true))
+    } else {
+      loadFromLocalStorage()
+      setIsLoaded(true)
+    }
+  }, [loadFromSheets])
+
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem("roblox-purchases", JSON.stringify(purchases))
@@ -37,28 +133,85 @@ export function GiftCardManager() {
     }
   }, [sales, isLoaded])
 
-  const addPurchase = (purchase: Purchase) => {
-    setPurchases((prev) => [...prev, purchase])
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("roblox-card-prices", JSON.stringify(cardPrices))
+    }
+  }, [cardPrices, isLoaded])
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("roblox-sale-prices", JSON.stringify(salePrices))
+    }
+  }, [salePrices, isLoaded])
+
+  const handleConnectionChange = (connected: boolean, webAppUrl: string | null) => {
+    setIsConnectedToSheets(connected)
+    setSheetsUrl(webAppUrl)
+    if (connected && webAppUrl) {
+      loadFromSheets(webAppUrl)
+    }
   }
 
-  const addSale = (sale: Sale) => {
-    setSales((prev) => [...prev, sale])
+  const handleSync = () => {
+    if (sheetsUrl) {
+      loadFromSheets(sheetsUrl)
+    }
   }
 
-  const deletePurchase = (id: string) => {
-    setPurchases((prev) => prev.filter((p) => p.id !== id))
+  const addPurchase = async (purchase: Purchase | Purchase[]) => {
+    const purchasesToAdd = Array.isArray(purchase) ? purchase : [purchase]
+    const newPurchases = [...purchases, ...purchasesToAdd]
+    setPurchases(newPurchases)
+    await syncToSheets(newPurchases, sales, cardPrices, salePrices)
   }
 
-  const deleteSale = (id: string) => {
-    setSales((prev) => prev.filter((s) => s.id !== id))
+  const addSale = async (sale: Sale) => {
+    const newSales = [...sales, sale]
+    setSales(newSales)
+    await syncToSheets(purchases, newSales, cardPrices, salePrices)
   }
 
-  const updatePurchase = (id: string, updated: Purchase) => {
-    setPurchases((prev) => prev.map((p) => (p.id === id ? updated : p)))
+  const deletePurchase = async (id: string) => {
+    const newPurchases = purchases.filter((p) => p.id !== id)
+    setPurchases(newPurchases)
+    await syncToSheets(newPurchases, sales, cardPrices, salePrices)
   }
 
-  const updateSale = (id: string, updated: Sale) => {
-    setSales((prev) => prev.map((s) => (s.id === id ? updated : s)))
+  const deleteSale = async (id: string) => {
+    const newSales = sales.filter((s) => s.id !== id)
+    setSales(newSales)
+    await syncToSheets(purchases, newSales, cardPrices, salePrices)
+  }
+
+  const updatePurchase = async (id: string, updated: Purchase) => {
+    const newPurchases = purchases.map((p) => (p.id === id ? updated : p))
+    setPurchases(newPurchases)
+    await syncToSheets(newPurchases, sales, cardPrices, salePrices)
+  }
+
+  const updateSale = async (id: string, updated: Sale) => {
+    const newSales = sales.map((s) => (s.id === id ? updated : s))
+    setSales(newSales)
+    await syncToSheets(purchases, newSales, cardPrices, salePrices)
+  }
+
+  const updateCardPrices = async (prices: { [key: number]: number }) => {
+    setCardPrices(prices)
+    await syncToSheets(purchases, sales, prices, salePrices)
+  }
+
+  const updateSalePrices = async (prices: SalePrices) => {
+    setSalePrices(prices)
+    await syncToSheets(purchases, sales, cardPrices, prices)
+  }
+
+  const importData = async (newPurchases: Purchase[], newSales: Sale[]) => {
+    const allPurchases = [...purchases, ...newPurchases]
+    const allSales = [...sales, ...newSales]
+    setPurchases(allPurchases)
+    setSales(allSales)
+    await syncToSheets(allPurchases, allSales, cardPrices, salePrices)
   }
 
   if (!isLoaded) {
@@ -72,15 +225,34 @@ export function GiftCardManager() {
   return (
     <div className="container mx-auto py-4 px-3 sm:py-8 sm:px-4 max-w-6xl">
       <header className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Roblox Gift Cards</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">Balance de compras y ventas</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Roblox Gift Cards</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Balance de compras y ventas</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isConnectedToSheets ? (
+              <Cloud
+                className={`w-4 h-4 ${lastSyncStatus === "success" ? "text-green-500" : lastSyncStatus === "error" ? "text-red-500" : "text-muted-foreground"}`}
+              />
+            ) : (
+              <CloudOff className="w-4 h-4 text-muted-foreground" />
+            )}
+            {isConnectedToSheets && (
+              <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
+                {isSyncing ? "Sincronizando..." : "Sincronizar"}
+              </Button>
+            )}
+          </div>
+        </div>
       </header>
 
       <BalanceOverview purchases={purchases} sales={sales} />
 
       <Tabs defaultValue="purchases" className="mt-6 sm:mt-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:flex">
             <TabsTrigger value="purchases" className="text-xs sm:text-sm">
               Compras
             </TabsTrigger>
@@ -90,16 +262,19 @@ export function GiftCardManager() {
             <TabsTrigger value="history" className="text-xs sm:text-sm">
               Historial
             </TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs sm:text-sm">
+              Config
+            </TabsTrigger>
           </TabsList>
           <ExportButton purchases={purchases} sales={sales} />
         </div>
 
         <TabsContent value="purchases">
-          <PurchaseForm onAddPurchase={addPurchase} />
+          <PurchaseForm onAddPurchase={addPurchase} cardPrices={cardPrices} />
         </TabsContent>
 
         <TabsContent value="sales">
-          <SaleForm onAddSale={addSale} purchases={purchases} />
+          <SaleForm onAddSale={addSale} purchases={purchases} sales={sales} salePrices={salePrices} />
         </TabsContent>
 
         <TabsContent value="history">
@@ -110,6 +285,17 @@ export function GiftCardManager() {
             onDeleteSale={deleteSale}
             onUpdatePurchase={updatePurchase}
             onUpdateSale={updateSale}
+          />
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <GoogleSheetsSetup onConnectionChange={handleConnectionChange} />
+          <SettingsPanel
+            cardPrices={cardPrices}
+            salePrices={salePrices}
+            onUpdatePrices={updateCardPrices}
+            onUpdateSalePrices={updateSalePrices}
+            onImportData={importData}
           />
         </TabsContent>
       </Tabs>

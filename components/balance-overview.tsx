@@ -23,12 +23,28 @@ export function BalanceOverview({ purchases, sales }: BalanceOverviewProps) {
     return sum + avgCost
   }, 0)
 
-  const totalCards400 = purchases.filter((p) => p.cardType === 400).length
-  const totalCards800 = purchases.filter((p) => p.cardType === 800).length
+  const purchases400 = purchases.filter((p) => p.cardType === 400).length
+  const purchases800 = purchases.filter((p) => p.cardType === 800).length
+
+  // Count sold cards by type (including quantity)
+  const sold400 = sales
+    .filter((s) => s.cardType === 400 && s.platform !== "lost")
+    .reduce((sum, s) => sum + s.quantity, 0)
+  const sold800 = sales
+    .filter((s) => s.cardType === 800 && s.platform !== "lost")
+    .reduce((sum, s) => sum + s.quantity, 0)
+
+  // Count lost cards by type
+  const lost400 = lostCards.filter((s) => s.cardType === 400).length
+  const lost800 = lostCards.filter((s) => s.cardType === 800).length
+
+  // Calculate available stock per type
+  const available400 = purchases400 - sold400 - lost400
+  const available800 = purchases800 - sold800 - lost800
+  const totalAvailable = available400 + available800
 
   const soldCards = actualSales.reduce((sum, s) => sum + s.quantity, 0)
   const lostCardsCount = lostCards.length
-  const availableCards = purchases.length - soldCards - lostCardsCount
 
   const profit = totalSalesRevenue - totalPurchaseCostARS
 
@@ -92,13 +108,13 @@ export function BalanceOverview({ purchases, sales }: BalanceOverviewProps) {
 
       <Card className="col-span-2 lg:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-          <CardTitle className="text-xs sm:text-sm font-medium">Stock</CardTitle>
+          <CardTitle className="text-xs sm:text-sm font-medium">Stock Disponible</CardTitle>
           <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-          <div className="text-lg sm:text-2xl font-bold">{availableCards}</div>
+          <div className="text-lg sm:text-2xl font-bold">{totalAvailable}</div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
-            400R: {totalCards400} | 800R: {totalCards800}
+            400R: {available400} | 800R: {available800}
           </p>
         </CardContent>
       </Card>
