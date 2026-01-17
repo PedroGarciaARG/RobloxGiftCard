@@ -6,15 +6,26 @@ import { PurchaseForm } from "./purchase-form"
 import { SaleForm } from "./sale-form"
 import { BalanceOverview } from "./balance-overview"
 import { TransactionHistory } from "./transaction-history"
-import { ExportButton } from "./export-button"
+import { ExportDialog } from "./export-dialog"
 import { SettingsPanel } from "./settings-panel"
 import { GoogleSheetsSetup } from "./google-sheets-setup"
 import { DailySalesCounter } from "./daily-sales-counter"
 import { saveAllData, loadAllData, getSheetConfig } from "@/lib/google-sheets"
 import type { Purchase, Sale } from "@/lib/types"
-import { RefreshCw, Cloud, CloudOff } from "lucide-react"
+import { RefreshCw, Cloud, CloudOff, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const DEFAULT_CARD_PRICES = {
   400: 5.17,
@@ -59,9 +70,27 @@ export function GiftCardManager() {
     setIsSyncing(true)
     try {
       const data = await loadAllData(webAppUrl)
+      console.log("[v0] Raw data from sheets:", data)
       if (data) {
-        setPurchases(data.purchases || [])
-        setSales(data.sales || [])
+        const parsedPurchases = (data.purchases || []).map((p: any) => ({
+          ...p,
+          cardType: Number(p.cardType) as 400 | 800 | 1000,
+          priceUSD: Number(p.priceUSD) || 0,
+          exchangeRate: Number(p.exchangeRate) || 0,
+          costARS: Number(p.costARS) || 0,
+        }))
+        const parsedSales = (data.sales || []).map((s: any) => ({
+          ...s,
+          cardType: Number(s.cardType) as 400 | 800 | 1000,
+          salePrice: Number(s.salePrice) || 0,
+          commission: Number(s.commission) || 0,
+          netAmount: Number(s.netAmount) || 0,
+          quantity: Number(s.quantity) || 1,
+        }))
+        console.log("[v0] Parsed purchases:", parsedPurchases)
+        console.log("[v0] Parsed sales:", parsedSales)
+        setPurchases(parsedPurchases)
+        setSales(parsedSales)
         if (data.cardPrices && Object.keys(data.cardPrices).length > 0) {
           // Convertir claves string a number
           const prices: { [key: number]: number } = { ...DEFAULT_CARD_PRICES } // Start with defaults
@@ -71,8 +100,9 @@ export function GiftCardManager() {
           setCardPrices(prices)
         }
         setLastSyncStatus("success")
-        console.log("[v0] Loaded from sheets:", data)
+        console.log("[v0] Loaded from sheets successfully")
       } else {
+        console.log("[v0] No data from sheets, loading from localStorage")
         loadFromLocalStorage()
       }
     } catch (error) {
@@ -197,6 +227,23 @@ export function GiftCardManager() {
     await syncToSheets(allPurchases, allSales, cardPrices)
   }
 
+  const clearAllData = async () => {
+    // Clear localStorage
+    localStorage.removeItem("roblox-purchases")
+    localStorage.removeItem("roblox-sales")
+    localStorage.removeItem("roblox-card-prices")
+
+    // Reset state
+    setPurchases([])
+    setSales([])
+    setCardPrices(DEFAULT_CARD_PRICES)
+
+    // Sync empty data to sheets if connected
+    if (isConnectedToSheets && sheetsUrl) {
+      await syncToSheets([], [], DEFAULT_CARD_PRICES)
+    }
+  }
+
   if (!isLoaded) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-black">
@@ -286,7 +333,7 @@ export function GiftCardManager() {
               Config
             </TabsTrigger>
           </TabsList>
-          <ExportButton purchases={purchases} sales={sales} />
+          <ExportDialog purchases={purchases} sales={sales} />
         </div>
 
         <TabsContent value="purchases">
@@ -311,6 +358,39 @@ export function GiftCardManager() {
         <TabsContent value="settings" className="space-y-6">
           <GoogleSheetsSetup onConnectionChange={handleConnectionChange} onDataMigrated={handleDataMigrated} />
           <SettingsPanel cardPrices={cardPrices} onUpdatePrices={updateCardPrices} onImportData={importData} />
+
+          <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4">
+            <h3 className="text-lg font-semibold text-red-400 mb-2">Zona de Peligro</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Esta acción borrará todas las compras, ventas y configuraciones. No se puede deshacer.
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Borrar Todos los Datos
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-background border-red-500/30">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-red-400">¿Estás seguro?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción eliminará permanentemente todas las compras, ventas y configuraciones de precios.
+                    También se borrarán los datos en Google Sheets si está conectado.
+                    <br />
+                    <br />
+                    <strong>Esta acción no se puede deshacer.</strong>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="border-muted-foreground/30">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={clearAllData} className="bg-red-600 hover:bg-red-700 text-white">
+                    Sí, borrar todo
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

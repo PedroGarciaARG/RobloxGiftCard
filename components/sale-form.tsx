@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,7 +43,7 @@ export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
   const [date, setDate] = useState(getLocalDateString())
   const [platform, setPlatform] = useState<"mercadolibre" | "direct" | "lost">("mercadolibre")
   const [customPrice, setCustomPrice] = useState("")
-  const [cardCode, setCardCode] = useState("")
+  const [cardCodes, setCardCodes] = useState<string[]>([""])
   const [buyerName, setBuyerName] = useState("")
   const [mlPrice, setMlPrice] = useState<string>("")
 
@@ -68,9 +68,31 @@ export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
   const available1000 = calculateAvailableStock(1000)
   const currentAvailable = cardTypeNum === 400 ? available400 : cardTypeNum === 800 ? available800 : available1000
 
+  useEffect(() => {
+    setCardCodes((prev) => {
+      const maxQty = Math.min(quantity, currentAvailable)
+      if (maxQty > prev.length) {
+        return [...prev, ...Array(maxQty - prev.length).fill("")]
+      } else if (maxQty < prev.length) {
+        return prev.slice(0, Math.max(1, maxQty))
+      }
+      return prev
+    })
+  }, [quantity, currentAvailable])
+
+  const updateCardCode = (index: number, value: string) => {
+    setCardCodes((prev) => {
+      const newCodes = [...prev]
+      newCodes[index] = value
+      return newCodes
+    })
+  }
+
   const handleCardTypeChange = (value: "400" | "800" | "1000") => {
     setCardType(value)
     setMlPrice("")
+    setCardCodes([""])
+    setQuantity(1)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -90,7 +112,7 @@ export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
       const sale: Sale = {
         id: crypto.randomUUID(),
         cardType: cardTypeNum,
-        cardCode: cardCode.trim() || undefined,
+        cardCode: cardCodes[i]?.trim() || undefined,
         buyerName: buyerName.trim() || undefined,
         salePrice,
         commission,
@@ -105,7 +127,7 @@ export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
 
     setQuantity(1)
     setCustomPrice("")
-    setCardCode("")
+    setCardCodes([""])
     setBuyerName("")
     setMlPrice("")
   }
@@ -164,20 +186,6 @@ export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cardCode" className="text-sm">
-                Código de Tarjeta
-              </Label>
-              <Input
-                id="cardCode"
-                type="text"
-                placeholder="Ej: XXXX-XXXX-XXXX"
-                value={cardCode}
-                onChange={(e) => setCardCode(e.target.value)}
-                className="h-10 sm:h-9"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="date" className="text-sm">
                 Fecha
               </Label>
@@ -188,6 +196,22 @@ export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
                 onChange={(e) => setDate(e.target.value)}
                 className="h-10 sm:h-9"
               />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-sm">Códigos de Tarjeta ({quantity})</Label>
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {cardCodes.map((code, index) => (
+                <Input
+                  key={index}
+                  type="text"
+                  placeholder={`Tarjeta ${index + 1}: XXXX-XXXX-XXXX`}
+                  value={code}
+                  onChange={(e) => updateCardCode(index, e.target.value)}
+                  className="h-10 sm:h-9"
+                />
+              ))}
             </div>
           </div>
 

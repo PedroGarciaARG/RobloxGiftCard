@@ -172,13 +172,13 @@ function doPost(e) {
     
     // También guardar en hojas visuales
     saveToVisualSheet(ss, "Compras", data.purchases || [], 
-      ["ID", "Fecha", "Tipo Tarjeta", "Precio USD", "Cotización", "Costo ARS"],
-      (p) => [p.id, p.purchaseDate, p.cardType + " Robux", p.priceUSD, p.exchangeRate, p.costARS]
+      ["ID", "Fecha", "Tipo Tarjeta", "Número Tarjeta", "Precio USD", "Cotización", "Costo ARS"],
+      (p) => [p.id, p.purchaseDate, p.cardType + " Robux", p.cardCode, p.priceUSD, p.exchangeRate, p.costARS]
     );
     
     saveToVisualSheet(ss, "Ventas", data.sales || [],
-      ["ID", "Fecha", "Tipo Tarjeta", "Cantidad", "Precio Venta", "Comisión", "Neto", "Plataforma"],
-      (s) => [s.id, s.saleDate, s.cardType + " Robux", s.quantity, s.salePrice, s.commission, s.netAmount, s.platform]
+      ["ID", "Fecha", "Tipo Tarjeta", "Número Tarjeta", "Comprador", "Cantidad", "Precio Venta", "Comisión", "Neto", "Plataforma"],
+      (s) => [s.id, s.saleDate, s.cardType + " Robux", s.cardCode, s.buyerName, s.quantity, s.salePrice, s.commission, s.netAmount, s.platform]
     );
     
     // Guardar precios
@@ -224,7 +224,7 @@ function loadData() {
       return ContentService
         .createTextOutput(JSON.stringify({ 
           success: true,
-          data: { purchases: [], sales: [], cardPrices: { "400": 4.99, "800": 9.99 } },
+          data: { purchases: [], sales: [], cardPrices: { "400": 5.17, "800": 10.34, "1000": 10 } },
           message: "No hay hoja AppData"
         }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -235,7 +235,7 @@ function loadData() {
       return ContentService
         .createTextOutput(JSON.stringify({ 
           success: true,
-          data: { purchases: [], sales: [], cardPrices: { "400": 4.99, "800": 9.99 } },
+          data: { purchases: [], sales: [], cardPrices: { "400": 5.17, "800": 10.34, "1000": 10 } },
           message: "Celda B2 vacía"
         }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -249,7 +249,7 @@ function loadData() {
         data: {
           purchases: data.purchases || [],
           sales: data.sales || [],
-          cardPrices: data.cardPrices || { "400": 4.99, "800": 9.99 }
+          cardPrices: data.cardPrices || { "400": 5.17, "800": 10.34, "1000": 10 }
         }
       }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -275,16 +275,19 @@ function migrateFromVisualSheets() {
     const comprasSheet = ss.getSheetByName("Compras");
     if (comprasSheet) {
       const comprasData = comprasSheet.getDataRange().getValues();
+      // Headers: ID, Fecha, Tipo Tarjeta, Número Tarjeta, Precio USD, Cotización, Costo ARS
       for (let i = 1; i < comprasData.length; i++) {
         const row = comprasData[i];
-        if (row[0]) { // Si tiene ID
+        if (row[0]) {
           purchases.push({
             id: row[0].toString(),
             purchaseDate: row[1]?.toString() || "",
             cardType: (row[2]?.toString() || "").replace(" Robux", ""),
-            priceUSD: parseFloat(row[3]) || 0,
-            exchangeRate: parseFloat(row[4]) || 0,
-            costARS: parseFloat(row[5]) || 0
+            cardCode: row[3]?.toString() || "",
+            priceUSD: parseFloat(row[4]) || 0,
+            exchangeRate: parseFloat(row[5]) || 0,
+            costARS: parseFloat(row[6]) || 0,
+            createdAt: new Date().toISOString()
           });
         }
       }
@@ -294,18 +297,22 @@ function migrateFromVisualSheets() {
     const ventasSheet = ss.getSheetByName("Ventas");
     if (ventasSheet) {
       const ventasData = ventasSheet.getDataRange().getValues();
+      // Headers: ID, Fecha, Tipo Tarjeta, Número Tarjeta, Comprador, Cantidad, Precio Venta, Comisión, Neto, Plataforma
       for (let i = 1; i < ventasData.length; i++) {
         const row = ventasData[i];
-        if (row[0]) { // Si tiene ID
+        if (row[0]) {
           sales.push({
             id: row[0].toString(),
             saleDate: row[1]?.toString() || "",
             cardType: (row[2]?.toString() || "").replace(" Robux", ""),
-            quantity: parseInt(row[3]) || 1,
-            salePrice: parseFloat(row[4]) || 0,
-            commission: parseFloat(row[5]) || 0,
-            netAmount: parseFloat(row[6]) || 0,
-            platform: row[7]?.toString() || "MercadoLibre"
+            cardCode: row[3]?.toString() || "",
+            buyerName: row[4]?.toString() || "",
+            quantity: parseInt(row[5]) || 1,
+            salePrice: parseFloat(row[6]) || 0,
+            commission: parseFloat(row[7]) || 0,
+            netAmount: parseFloat(row[8]) || 0,
+            platform: row[9]?.toString() || "mercadolibre",
+            createdAt: new Date().toISOString()
           });
         }
       }
@@ -314,7 +321,7 @@ function migrateFromVisualSheets() {
     const data = {
       purchases,
       sales,
-      cardPrices: { "400": 4.99, "800": 9.99 }
+      cardPrices: { "400": 5.17, "800": 10.34, "1000": 10 }
     };
     
     // Guardar en AppData si hay datos

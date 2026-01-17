@@ -1,6 +1,7 @@
 export interface Purchase {
   id: string
   cardType: 400 | 800 | 1000
+  cardCode?: string
   priceUSD: number
   exchangeRate: number
   costARS: number
