@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, Pencil, Check, X, Copy } from "lucide-react"
-import { formatLocalDate, compareDates } from "@/lib/date-utils"
+import { Trash2, Pencil, Check, X, Copy, Search } from "lucide-react"
 import type { Purchase, Sale } from "@/lib/types"
 
 interface TransactionHistoryProps {
@@ -29,10 +28,24 @@ export function TransactionHistory({
   const [editingPurchase, setEditingPurchase] = useState<string | null>(null)
   const [editingSale, setEditingSale] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<Record<string, string>>({})
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const sortedPurchases = [...purchases].sort((a, b) => compareDates(a.purchaseDate, b.purchaseDate))
+  const filterSales = (salesList: Sale[]) => {
+    if (!searchQuery.trim()) return salesList
+    const query = searchQuery.toLowerCase()
+    return salesList.filter(
+      (s) =>
+        s.cardCode?.toLowerCase().includes(query) ||
+        s.buyerName?.toLowerCase().includes(query) ||
+        s.cardType.toString().includes(query),
+    )
+  }
 
-  const sortedSales = [...sales].sort((a, b) => compareDates(a.saleDate, b.saleDate))
+  const sortedPurchases = [...purchases].sort(
+    (a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime(),
+  )
+
+  const sortedSales = [...sales].sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime())
 
   const actualSales = sales.filter((s) => s.platform !== "lost")
   const lostCards = sales.filter((s) => s.platform === "lost")
@@ -63,6 +76,7 @@ export function TransactionHistory({
       date: sale.saleDate,
       price: sale.salePrice.toString(),
       cardCode: sale.cardCode || "",
+      buyerName: sale.buyerName || "",
     })
   }
 
@@ -75,6 +89,7 @@ export function TransactionHistory({
       salePrice: sale.platform === "lost" ? 0 : newPrice,
       netAmount: sale.platform === "lost" ? 0 : newPrice - commission,
       cardCode: editValues.cardCode?.trim() || undefined,
+      buyerName: editValues.buyerName?.trim() || undefined,
     }
     onUpdateSale(sale.id, updated)
     setEditingSale(null)
@@ -101,6 +116,16 @@ export function TransactionHistory({
     <Card>
       <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 sm:pb-4">
         <CardTitle className="text-lg sm:text-xl">Historial de Transacciones</CardTitle>
+        <div className="relative mt-2">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar por código, comprador o tipo..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-9 text-sm"
+          />
+        </div>
       </CardHeader>
       <CardContent className="px-3 sm:px-6 pb-4 sm:pb-6">
         <Tabs defaultValue="purchases">
@@ -120,7 +145,7 @@ export function TransactionHistory({
             {sortedPurchases.length === 0 ? (
               <p className="text-center text-muted-foreground py-8 text-sm">No hay compras registradas</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {sortedPurchases.map((purchase) => (
                   <div key={purchase.id} className="p-3 bg-muted rounded-lg">
                     {editingPurchase === purchase.id ? (
@@ -154,7 +179,7 @@ export function TransactionHistory({
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-sm">{purchase.cardType} Robux</p>
                           <p className="text-xs text-muted-foreground truncate">
-                            {formatLocalDate(purchase.purchaseDate)} | ${purchase.priceUSD} x{" "}
+                            {new Date(purchase.purchaseDate).toLocaleDateString("es-AR")} | ${purchase.priceUSD} x{" "}
                             {purchase.exchangeRate.toFixed(0)}
                           </p>
                         </div>
@@ -188,183 +213,188 @@ export function TransactionHistory({
           </TabsContent>
 
           <TabsContent value="sales">
-            {actualSales.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8 text-sm">No hay ventas registradas</p>
+            {filterSales(actualSales).length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">
+                {searchQuery ? "No se encontraron ventas" : "No hay ventas registradas"}
+              </p>
             ) : (
-              <div className="space-y-2">
-                {sortedSales
-                  .filter((s) => s.platform !== "lost")
-                  .map((sale) => (
-                    <div key={sale.id} className="p-3 bg-muted rounded-lg">
-                      {editingSale === sale.id ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              type="date"
-                              value={editValues.date}
-                              onChange={(e) => setEditValues({ ...editValues, date: e.target.value })}
-                              className="h-9 text-sm"
-                            />
-                            <Input
-                              type="number"
-                              value={editValues.price}
-                              onChange={(e) => setEditValues({ ...editValues, price: e.target.value })}
-                              className="h-9 text-sm"
-                              placeholder="Precio"
-                            />
-                          </div>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {filterSales(sortedSales.filter((s) => s.platform !== "lost")).map((sale) => (
+                  <div key={sale.id} className="p-3 bg-muted rounded-lg">
+                    {editingSale === sale.id ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <Input
-                            type="text"
-                            value={editValues.cardCode}
-                            onChange={(e) => setEditValues({ ...editValues, cardCode: e.target.value })}
+                            type="date"
+                            value={editValues.date}
+                            onChange={(e) => setEditValues({ ...editValues, date: e.target.value })}
                             className="h-9 text-sm"
-                            placeholder="Código"
                           />
-                          <div className="flex gap-2 justify-end">
-                            <Button size="sm" variant="ghost" onClick={() => saveSaleEdit(sale)}>
-                              <Check className="h-4 w-4 mr-1" /> Guardar
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setEditingSale(null)}>
-                              <X className="h-4 w-4 mr-1" /> Cancelar
-                            </Button>
-                          </div>
+                          <Input
+                            type="number"
+                            value={editValues.price}
+                            onChange={(e) => setEditValues({ ...editValues, price: e.target.value })}
+                            className="h-9 text-sm"
+                            placeholder="Precio"
+                          />
                         </div>
-                      ) : (
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm flex items-center gap-1.5 flex-wrap">
-                              {sale.cardType} Robux
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-background">
-                                {getPlatformLabel(sale.platform)}
-                              </span>
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatLocalDate(sale.saleDate)} | ${sale.salePrice.toLocaleString("es-AR")}
-                              {sale.commission > 0 && (
-                                <span className="text-red-500"> -{sale.commission.toLocaleString("es-AR")}</span>
-                              )}
-                            </p>
-                            {sale.cardCode && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded truncate max-w-[150px]">
-                                  {sale.cardCode}
-                                </span>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-5 w-5"
-                                  onClick={() => copyCode(sale.cardCode!)}
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className="font-bold text-sm text-green-600">
-                              ${sale.netAmount.toLocaleString("es-AR")}
+                        <Input
+                          type="text"
+                          value={editValues.buyerName}
+                          onChange={(e) => setEditValues({ ...editValues, buyerName: e.target.value })}
+                          className="h-9 text-sm"
+                          placeholder="Nombre comprador"
+                        />
+                        <Input
+                          type="text"
+                          value={editValues.cardCode}
+                          onChange={(e) => setEditValues({ ...editValues, cardCode: e.target.value })}
+                          className="h-9 text-sm"
+                          placeholder="Código"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="ghost" onClick={() => saveSaleEdit(sale)}>
+                            <Check className="h-4 w-4 mr-1" /> Guardar
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingSale(null)}>
+                            <X className="h-4 w-4 mr-1" /> Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm flex items-center gap-1.5 flex-wrap">
+                            {sale.cardType} Robux
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-background">
+                              {getPlatformLabel(sale.platform)}
                             </span>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEditSale(sale)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => onDeleteSale(sale.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-red-600" />
-                            </Button>
-                          </div>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(sale.saleDate).toLocaleDateString("es-AR")} | $
+                            {sale.salePrice.toLocaleString("es-AR")}
+                            {sale.commission > 0 && (
+                              <span className="text-red-500"> -{sale.commission.toLocaleString("es-AR")}</span>
+                            )}
+                          </p>
+                          {sale.buyerName && (
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                              Comprador: {sale.buyerName}
+                            </p>
+                          )}
+                          {sale.cardCode && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded truncate max-w-[150px]">
+                                {sale.cardCode}
+                              </span>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5"
+                                onClick={() => copyCode(sale.cardCode!)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="font-bold text-sm text-green-600">
+                            ${sale.netAmount.toLocaleString("es-AR")}
+                          </span>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEditSale(sale)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onDeleteSale(sale.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="lost">
-            {lostCards.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8 text-sm">No hay tarjetas perdidas</p>
+            {filterSales(lostCards).length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">
+                {searchQuery ? "No se encontraron pérdidas" : "No hay tarjetas perdidas"}
+              </p>
             ) : (
-              <div className="space-y-2">
-                {sortedSales
-                  .filter((s) => s.platform === "lost")
-                  .map((sale) => (
-                    <div
-                      key={sale.id}
-                      className="p-3 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-900"
-                    >
-                      {editingSale === sale.id ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex gap-2">
-                            <Input
-                              type="date"
-                              value={editValues.date}
-                              onChange={(e) => setEditValues({ ...editValues, date: e.target.value })}
-                              className="flex-1 h-9 text-sm"
-                            />
-                          </div>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {filterSales(sortedSales.filter((s) => s.platform === "lost")).map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="p-3 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-900"
+                  >
+                    {editingSale === sale.id ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
                           <Input
-                            type="text"
-                            value={editValues.cardCode}
-                            onChange={(e) => setEditValues({ ...editValues, cardCode: e.target.value })}
-                            className="h-9 text-sm"
-                            placeholder="Código"
+                            type="date"
+                            value={editValues.date}
+                            onChange={(e) => setEditValues({ ...editValues, date: e.target.value })}
+                            className="flex-1 h-9 text-sm"
                           />
-                          <div className="flex gap-2 justify-end">
-                            <Button size="sm" variant="ghost" onClick={() => saveSaleEdit(sale)}>
-                              <Check className="h-4 w-4 mr-1" /> Guardar
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setEditingSale(null)}>
-                              <X className="h-4 w-4 mr-1" /> Cancelar
-                            </Button>
-                          </div>
                         </div>
-                      ) : (
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm text-red-700 dark:text-red-400 flex items-center gap-1.5">
-                              {sale.cardType} Robux
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-300">
-                                PERDIDA
+                        <Input
+                          type="text"
+                          value={editValues.cardCode}
+                          onChange={(e) => setEditValues({ ...editValues, cardCode: e.target.value })}
+                          className="h-9 text-sm"
+                          placeholder="Código"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="ghost" onClick={() => saveSaleEdit(sale)}>
+                            <Check className="h-4 w-4 mr-1" /> Guardar
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingSale(null)}>
+                            <X className="h-4 w-4 mr-1" /> Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm text-red-700 dark:text-red-400 flex items-center gap-1.5">
+                            {sale.cardType} Robux
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-300">
+                              PERDIDA
+                            </span>
+                          </p>
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            {new Date(sale.saleDate).toLocaleDateString("es-AR")}
+                          </p>
+                          {sale.cardCode && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded truncate max-w-[150px]">
+                                {sale.cardCode}
                               </span>
-                            </p>
-                            <p className="text-xs text-red-600 dark:text-red-400">{formatLocalDate(sale.saleDate)}</p>
-                            {sale.cardCode && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <span className="text-[10px] font-mono bg-background px-1.5 py-0.5 rounded truncate max-w-[150px]">
-                                  {sale.cardCode}
-                                </span>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-5 w-5"
-                                  onClick={() => copyCode(sale.cardCode!)}
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEditSale(sale)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => onDeleteSale(sale.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-red-600" />
-                            </Button>
-                          </div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5"
+                                onClick={() => copyCode(sale.cardCode!)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEditSale(sale)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onDeleteSale(sale.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </TabsContent>

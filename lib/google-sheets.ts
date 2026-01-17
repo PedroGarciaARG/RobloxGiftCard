@@ -11,12 +11,6 @@ export interface AppData {
   purchases: any[]
   sales: any[]
   cardPrices: { [key: string]: number }
-  salePrices?: {
-    mlPrice400: number
-    mlPrice800: number
-    mlCommission400: number
-    mlCommission800: number
-  }
 }
 
 export function getSheetConfig(): SheetConfig | null {
@@ -56,7 +50,6 @@ export async function saveAllData(webAppUrl: string, data: AppData): Promise<boo
         purchases: data.purchases,
         sales: data.sales,
         cardPrices: data.cardPrices,
-        salePrices: data.salePrices,
         lastUpdated: new Date().toISOString(),
       }),
       redirect: "follow",
@@ -148,18 +141,18 @@ function doPost(e) {
     // También crear hojas individuales para visualización
     saveToVisualSheet(ss, "Compras", data.purchases || [], 
       ["ID", "Fecha", "Tipo Tarjeta", "Precio USD", "Cotización", "Costo ARS"],
-      (p) => [p.id, p.purchaseDate, p.cardType + " Robux", p.priceUSD, p.exchangeRate, p.costARS]
+      (p) => [p.id, p.date, p.cardType + " Robux", p.priceUSD, p.exchangeRate, p.costARS]
     );
     
     saveToVisualSheet(ss, "Ventas", data.sales || [],
-      ["ID", "Fecha", "Tipo Tarjeta", "Cantidad", "Precio Venta", "Comisión", "Neto", "Plataforma"],
-      (s) => [s.id, s.saleDate, s.cardType + " Robux", s.quantity, s.salePrice, s.commission, s.netAmount, s.platform]
+      ["ID", "Fecha", "Tipo Tarjeta", "Cantidad", "Precio Venta", "Comisión", "Neto", "Tipo"],
+      (s) => [s.id, s.date, s.cardType + " Robux", s.quantity, s.salePrice, s.commission, s.netAmount, s.type]
     );
     
-    // Guardar precios de compra
-    let preciosSheet = ss.getSheetByName("Precios Compra");
+    // Guardar precios
+    let preciosSheet = ss.getSheetByName("Precios");
     if (!preciosSheet) {
-      preciosSheet = ss.insertSheet("Precios Compra");
+      preciosSheet = ss.insertSheet("Precios");
     }
     preciosSheet.clear();
     preciosSheet.getRange("A1:B1").setValues([["Tipo Tarjeta", "Precio USD"]]);
@@ -170,22 +163,6 @@ function doPost(e) {
           precios.map(([tipo, precio]) => [tipo + " Robux", precio])
         );
       }
-    }
-    
-    // Guardar precios de venta
-    if (data.salePrices) {
-      let ventaPreciosSheet = ss.getSheetByName("Precios Venta");
-      if (!ventaPreciosSheet) {
-        ventaPreciosSheet = ss.insertSheet("Precios Venta");
-      }
-      ventaPreciosSheet.clear();
-      ventaPreciosSheet.getRange("A1:B1").setValues([["Concepto", "Valor ARS"]]);
-      ventaPreciosSheet.getRange("A2:B5").setValues([
-        ["Precio ML 400 Robux", data.salePrices.mlPrice400],
-        ["Precio ML 800 Robux", data.salePrices.mlPrice800],
-        ["Comisión ML 400 Robux", data.salePrices.mlCommission400],
-        ["Comisión ML 800 Robux", data.salePrices.mlCommission800]
-      ]);
     }
     
     return ContentService
@@ -215,17 +192,7 @@ function loadData() {
       return ContentService
         .createTextOutput(JSON.stringify({ 
           success: true,
-          data: { 
-            purchases: [], 
-            sales: [], 
-            cardPrices: { "400": 5.17, "800": 10.34 },
-            salePrices: {
-              mlPrice400: 13999,
-              mlPrice800: 27999,
-              mlCommission400: 3284.84,
-              mlCommission800: 6995
-            }
-          }
+          data: { purchases: [], sales: [], cardPrices: { "400": 4.99, "800": 9.99 } }
         }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -235,17 +202,7 @@ function loadData() {
       return ContentService
         .createTextOutput(JSON.stringify({ 
           success: true,
-          data: { 
-            purchases: [], 
-            sales: [], 
-            cardPrices: { "400": 5.17, "800": 10.34 },
-            salePrices: {
-              mlPrice400: 13999,
-              mlPrice800: 27999,
-              mlCommission400: 3284.84,
-              mlCommission800: 6995
-            }
-          }
+          data: { purchases: [], sales: [], cardPrices: { "400": 4.99, "800": 9.99 } }
         }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -258,13 +215,7 @@ function loadData() {
         data: {
           purchases: data.purchases || [],
           sales: data.sales || [],
-          cardPrices: data.cardPrices || { "400": 5.17, "800": 10.34 },
-          salePrices: data.salePrices || {
-            mlPrice400: 13999,
-            mlPrice800: 27999,
-            mlCommission400: 3284.84,
-            mlCommission800: 6995
-          }
+          cardPrices: data.cardPrices || { "400": 4.99, "800": 9.99 }
         }
       }))
       .setMimeType(ContentService.MimeType.JSON);

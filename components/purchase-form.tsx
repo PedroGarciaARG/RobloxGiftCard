@@ -9,18 +9,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getExchangeRate } from "@/lib/exchange-rate"
-import { getTodayString } from "@/lib/date-utils"
 import type { Purchase } from "@/lib/types"
 
 interface PurchaseFormProps {
-  onAddPurchase: (purchase: Purchase[]) => void
+  onAddPurchase: (purchase: Purchase) => void
   cardPrices: { [key: number]: number }
 }
 
 export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
-  const [cardType, setCardType] = useState<"400" | "800">("400")
+  const [cardType, setCardType] = useState<"400" | "800" | "1000">("400")
   const [quantity, setQuantity] = useState(1)
-  const [date, setDate] = useState(getTodayString())
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [isLoading, setIsLoading] = useState(false)
   const [exchangeRate, setExchangeRate] = useState<number | null>(null)
   const [customRate, setCustomRate] = useState("")
@@ -29,10 +28,9 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
   const fetchRate = async () => {
     setIsLoading(true)
     try {
-      const rate = await getExchangeRate(date)
+      const rate = await getExchangeRate()
       setExchangeRate(rate)
       setCustomRate(rate.toString())
-      console.log("[v0] Fetched rate for date", date, ":", rate)
     } catch (error) {
       console.error("Error fetching rate:", error)
     }
@@ -48,11 +46,10 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
       return
     }
 
-    const cardTypeNum = Number.parseInt(cardType) as 400 | 800
+    const cardTypeNum = Number.parseInt(cardType) as 400 | 800 | 1000
     const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : cardPrices[cardTypeNum]
     const costARS = priceUSD * rate
 
-    const newPurchases: Purchase[] = []
     for (let i = 0; i < quantity; i++) {
       const purchase: Purchase = {
         id: crypto.randomUUID(),
@@ -63,10 +60,8 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
         purchaseDate: date,
         createdAt: new Date().toISOString(),
       }
-      newPurchases.push(purchase)
+      onAddPurchase(purchase)
     }
-
-    await onAddPurchase(newPurchases)
 
     setQuantity(1)
     setExchangeRate(null)
@@ -74,7 +69,7 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
     setCustomPriceUSD("")
   }
 
-  const cardTypeNum = Number.parseInt(cardType) as 400 | 800
+  const cardTypeNum = Number.parseInt(cardType) as 400 | 800 | 1000
   const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : cardPrices[cardTypeNum]
   const estimatedCost = customRate
     ? priceUSD * Number.parseFloat(customRate) * quantity
@@ -82,9 +77,9 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
       ? priceUSD * exchangeRate * quantity
       : 0
 
-  const handleCardTypeChange = (v: "400" | "800") => {
+  const handleCardTypeChange = (v: "400" | "800" | "1000") => {
     setCardType(v)
-    setCustomPriceUSD(cardPrices[Number.parseInt(v) as 400 | 800].toString())
+    setCustomPriceUSD(cardPrices[Number.parseInt(v) as 400 | 800 | 1000].toString())
   }
 
   return (
@@ -106,6 +101,7 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
                 <SelectContent>
                   <SelectItem value="400">400 Robux</SelectItem>
                   <SelectItem value="800">800 Robux</SelectItem>
+                  <SelectItem value="1000">1000 Robux (10 USD)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -173,9 +169,6 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
                   {isLoading ? "..." : "Obtener"}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Obtiene el valor histórico del dólar blue según la fecha seleccionada
-              </p>
             </div>
           </div>
 

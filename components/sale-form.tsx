@@ -9,36 +9,47 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { getTodayString } from "@/lib/date-utils"
-import type { Sale, Purchase, SalePrices } from "@/lib/types"
+import type { Sale, Purchase } from "@/lib/types"
 
 interface SaleFormProps {
   onAddSale: (sale: Sale) => void
   purchases: Purchase[]
   sales: Sale[]
-  salePrices: SalePrices
 }
 
-export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormProps) {
-  const [cardType, setCardType] = useState<"400" | "800">("400")
+const DEFAULT_ML_COMMISSION = {
+  400: 3284.84,
+  800: 6995,
+  1000: 8500,
+}
+
+const DEFAULT_ML_PRICE = {
+  400: 13999,
+  800: 27999,
+  1000: 34999,
+}
+
+export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
+  const [cardType, setCardType] = useState<"400" | "800" | "1000">("400")
   const [quantity, setQuantity] = useState(1)
-  const [date, setDate] = useState(getTodayString())
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [platform, setPlatform] = useState<"mercadolibre" | "direct" | "lost">("mercadolibre")
   const [customPrice, setCustomPrice] = useState("")
   const [cardCode, setCardCode] = useState("")
+  const [buyerName, setBuyerName] = useState("")
+  const [mlPrice, setMlPrice] = useState<string>("")
 
-  const cardTypeNum = Number.parseInt(cardType) as 400 | 800
+  const cardTypeNum = Number.parseInt(cardType) as 400 | 800 | 1000
 
-  const mlPrice = cardTypeNum === 400 ? salePrices.mlPrice400 : salePrices.mlPrice800
-  const mlCommission = cardTypeNum === 400 ? salePrices.mlCommission400 : salePrices.mlCommission800
+  const currentMLPrice = mlPrice ? Number.parseFloat(mlPrice) : DEFAULT_ML_PRICE[cardTypeNum]
+  const commission = platform === "mercadolibre" ? DEFAULT_ML_COMMISSION[cardTypeNum] : 0
 
   const salePrice =
-    platform === "lost" ? 0 : platform === "mercadolibre" ? mlPrice : Number.parseFloat(customPrice) || 0
+    platform === "lost" ? 0 : platform === "mercadolibre" ? currentMLPrice : Number.parseFloat(customPrice) || 0
 
-  const commission = platform === "mercadolibre" ? mlCommission : 0
   const netAmount = platform === "lost" ? 0 : salePrice - commission
 
-  const calculateAvailableStock = (type: 400 | 800) => {
+  const calculateAvailableStock = (type: 400 | 800 | 1000) => {
     const purchased = purchases.filter((p) => p.cardType === type).length
     const sold = sales.filter((s) => s.cardType === type).reduce((sum, s) => sum + s.quantity, 0)
     return purchased - sold
@@ -46,7 +57,13 @@ export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormPr
 
   const available400 = calculateAvailableStock(400)
   const available800 = calculateAvailableStock(800)
-  const currentAvailable = cardTypeNum === 400 ? available400 : available800
+  const available1000 = calculateAvailableStock(1000)
+  const currentAvailable = cardTypeNum === 400 ? available400 : cardTypeNum === 800 ? available800 : available1000
+
+  const handleCardTypeChange = (value: "400" | "800" | "1000") => {
+    setCardType(value)
+    setMlPrice("")
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,6 +83,7 @@ export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormPr
         id: crypto.randomUUID(),
         cardType: cardTypeNum,
         cardCode: cardCode.trim() || undefined,
+        buyerName: buyerName.trim() || undefined,
         salePrice,
         commission,
         netAmount,
@@ -80,6 +98,8 @@ export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormPr
     setQuantity(1)
     setCustomPrice("")
     setCardCode("")
+    setBuyerName("")
+    setMlPrice("")
   }
 
   return (
@@ -94,13 +114,14 @@ export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormPr
               <Label htmlFor="cardType" className="text-sm">
                 Tipo de Tarjeta
               </Label>
-              <Select value={cardType} onValueChange={(v) => setCardType(v as "400" | "800")}>
+              <Select value={cardType} onValueChange={handleCardTypeChange}>
                 <SelectTrigger className="h-10 sm:h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="400">400 Robux (Disp: {available400})</SelectItem>
                   <SelectItem value="800">800 Robux (Disp: {available800})</SelectItem>
+                  <SelectItem value="1000">1000 Robux (Disp: {available1000})</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -116,6 +137,20 @@ export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormPr
                 max={currentAvailable}
                 value={quantity}
                 onChange={(e) => setQuantity(Math.min(Number.parseInt(e.target.value) || 1, currentAvailable))}
+                className="h-10 sm:h-9"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="buyerName" className="text-sm">
+                Nombre del Comprador
+              </Label>
+              <Input
+                id="buyerName"
+                type="text"
+                placeholder="Ej: Juan Pérez"
+                value={buyerName}
+                onChange={(e) => setBuyerName(e.target.value)}
                 className="h-10 sm:h-9"
               />
             </div>
@@ -159,7 +194,9 @@ export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormPr
                 <RadioGroupItem value="mercadolibre" id="ml" className="mt-0.5" />
                 <Label htmlFor="ml" className="font-normal cursor-pointer text-sm leading-tight">
                   MercadoLibre{" "}
-                  <span className="text-muted-foreground">(com: ${mlCommission.toLocaleString("es-AR")})</span>
+                  <span className="text-muted-foreground">
+                    (com: ${DEFAULT_ML_COMMISSION[cardTypeNum].toLocaleString("es-AR")})
+                  </span>
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
@@ -176,6 +213,22 @@ export function SaleForm({ onAddSale, purchases, sales, salePrices }: SaleFormPr
               </div>
             </RadioGroup>
           </div>
+
+          {platform === "mercadolibre" && (
+            <div className="space-y-2">
+              <Label htmlFor="mlPrice" className="text-sm">
+                Precio de Venta ML (ARS)
+              </Label>
+              <Input
+                id="mlPrice"
+                type="number"
+                placeholder={`Default: ${DEFAULT_ML_PRICE[cardTypeNum]}`}
+                value={mlPrice}
+                onChange={(e) => setMlPrice(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+          )}
 
           {platform === "direct" && (
             <div className="space-y-2">

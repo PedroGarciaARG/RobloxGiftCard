@@ -25,23 +25,26 @@ export function BalanceOverview({ purchases, sales }: BalanceOverviewProps) {
 
   const purchases400 = purchases.filter((p) => p.cardType === 400).length
   const purchases800 = purchases.filter((p) => p.cardType === 800).length
+  const purchases1000 = purchases.filter((p) => p.cardType === 1000).length
 
-  // Count sold cards by type (including quantity)
   const sold400 = sales
     .filter((s) => s.cardType === 400 && s.platform !== "lost")
     .reduce((sum, s) => sum + s.quantity, 0)
   const sold800 = sales
     .filter((s) => s.cardType === 800 && s.platform !== "lost")
     .reduce((sum, s) => sum + s.quantity, 0)
+  const sold1000 = sales
+    .filter((s) => s.cardType === 1000 && s.platform !== "lost")
+    .reduce((sum, s) => sum + s.quantity, 0)
 
-  // Count lost cards by type
   const lost400 = lostCards.filter((s) => s.cardType === 400).length
   const lost800 = lostCards.filter((s) => s.cardType === 800).length
+  const lost1000 = lostCards.filter((s) => s.cardType === 1000).length
 
-  // Calculate available stock per type
   const available400 = purchases400 - sold400 - lost400
   const available800 = purchases800 - sold800 - lost800
-  const totalAvailable = available400 + available800
+  const available1000 = purchases1000 - sold1000 - lost1000
+  const totalAvailable = available400 + available800 + available1000
 
   const soldCards = actualSales.reduce((sum, s) => sum + s.quantity, 0)
   const lostCardsCount = lostCards.length
@@ -114,7 +117,7 @@ export function BalanceOverview({ purchases, sales }: BalanceOverviewProps) {
         <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
           <div className="text-lg sm:text-2xl font-bold">{totalAvailable}</div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
-            400R: {available400} | 800R: {available800}
+            400R: {available400} | 800R: {available800} | 1000R: {available1000}
           </p>
         </CardContent>
       </Card>

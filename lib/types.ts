@@ -1,6 +1,6 @@
 export interface Purchase {
   id: string
-  cardType: 400 | 800
+  cardType: 400 | 800 | 1000
   priceUSD: number
   exchangeRate: number
   costARS: number
@@ -10,8 +10,9 @@ export interface Purchase {
 
 export interface Sale {
   id: string
-  cardType: 400 | 800
+  cardType: 400 | 800 | 1000
   cardCode?: string
+  buyerName?: string
   salePrice: number
   commission: number
   netAmount: number
@@ -19,11 +20,4 @@ export interface Sale {
   platform: "mercadolibre" | "direct" | "lost"
   quantity: number
   createdAt: string
-}
-
-export interface SalePrices {
-  mlPrice400: number
-  mlPrice800: number
-  mlCommission400: number
-  mlCommission800: number
 }

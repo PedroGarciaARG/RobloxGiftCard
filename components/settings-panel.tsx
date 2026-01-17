@@ -7,62 +7,35 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Settings, Save, Upload } from "lucide-react"
-import type { Purchase, Sale, SalePrices } from "@/lib/types"
+import type { Purchase, Sale } from "@/lib/types"
 
 interface SettingsPanelProps {
   cardPrices: { [key: number]: number }
-  salePrices: SalePrices
   onUpdatePrices: (prices: { [key: number]: number }) => void
-  onUpdateSalePrices: (prices: SalePrices) => void
   onImportData: (purchases: Purchase[], sales: Sale[]) => void
 }
 
-export function SettingsPanel({
-  cardPrices,
-  salePrices,
-  onUpdatePrices,
-  onUpdateSalePrices,
-  onImportData,
-}: SettingsPanelProps) {
+export function SettingsPanel({ cardPrices, onUpdatePrices, onImportData }: SettingsPanelProps) {
   const [price400, setPrice400] = useState(cardPrices[400]?.toString() || "5.17")
   const [price800, setPrice800] = useState(cardPrices[800]?.toString() || "10.34")
-  const [mlPrice400, setMlPrice400] = useState(salePrices.mlPrice400.toString())
-  const [mlPrice800, setMlPrice800] = useState(salePrices.mlPrice800.toString())
-  const [mlCommission400, setMlCommission400] = useState(salePrices.mlCommission400.toString())
-  const [mlCommission800, setMlCommission800] = useState(salePrices.mlCommission800.toString())
+  const [price1000, setPrice1000] = useState(cardPrices[1000]?.toString() || "10")
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState(false)
 
   useEffect(() => {
     setPrice400(cardPrices[400]?.toString() || "5.17")
     setPrice800(cardPrices[800]?.toString() || "10.34")
+    setPrice1000(cardPrices[1000]?.toString() || "10")
   }, [cardPrices])
-
-  useEffect(() => {
-    setMlPrice400(salePrices.mlPrice400.toString())
-    setMlPrice800(salePrices.mlPrice800.toString())
-    setMlCommission400(salePrices.mlCommission400.toString())
-    setMlCommission800(salePrices.mlCommission800.toString())
-  }, [salePrices])
 
   const handleSavePrices = () => {
     const newPrices = {
       400: Number.parseFloat(price400) || 5.17,
       800: Number.parseFloat(price800) || 10.34,
+      1000: Number.parseFloat(price1000) || 10,
     }
     onUpdatePrices(newPrices)
-    alert("Precios de compra actualizados correctamente")
-  }
-
-  const handleSaveSalePrices = () => {
-    const newSalePrices: SalePrices = {
-      mlPrice400: Number.parseFloat(mlPrice400) || 13999,
-      mlPrice800: Number.parseFloat(mlPrice800) || 27999,
-      mlCommission400: Number.parseFloat(mlCommission400) || 3284.84,
-      mlCommission800: Number.parseFloat(mlCommission800) || 6995,
-    }
-    onUpdateSalePrices(newSalePrices)
-    alert("Precios de venta actualizados correctamente")
+    alert("Precios actualizados correctamente")
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,6 +76,7 @@ export function SettingsPanel({
             continue
           }
 
+          // Skip headers
           if (
             trimmed.includes("TIPO") ||
             trimmed.includes("FECHA") ||
@@ -118,9 +92,9 @@ export function SettingsPanel({
           const parts = line.split(",").map((p) => p.trim())
 
           if (section === "compras" && parts.length >= 5) {
-            const cardType = parts[0].includes("800") ? 800 : 400
+            const cardType = parts[0].includes("1000") ? 1000 : parts[0].includes("800") ? 800 : 400
             const date = parseDate(parts[1])
-            const priceUSD = Number.parseFloat(parts[2]) || (cardType === 400 ? 5.17 : 10.34)
+            const priceUSD = Number.parseFloat(parts[2]) || (cardType === 400 ? 5.17 : cardType === 800 ? 10.34 : 10)
             const rate = Number.parseFloat(parts[3]) || 1000
             const costARS = Number.parseFloat(parts[4]) || priceUSD * rate
 
@@ -138,7 +112,7 @@ export function SettingsPanel({
           }
 
           if (section === "ventas" && parts.length >= 5) {
-            const cardType = parts[0].includes("800") ? 800 : 400
+            const cardType = parts[0].includes("1000") ? 1000 : parts[0].includes("800") ? 800 : 400
             const date = parseDate(parts[1])
             const platform = parts[2].toLowerCase().includes("ml") ? "mercadolibre" : "direct"
             const cardCode = parts[3] || undefined
@@ -163,7 +137,7 @@ export function SettingsPanel({
           }
 
           if (section === "perdidas" && parts.length >= 2) {
-            const cardType = parts[0].includes("800") ? 800 : 400
+            const cardType = parts[0].includes("1000") ? 1000 : parts[0].includes("800") ? 800 : 400
             const date = parseDate(parts[1])
             const cardCode = parts[2] || undefined
 
@@ -205,17 +179,21 @@ export function SettingsPanel({
   const parseDate = (dateStr: string): string | null => {
     if (!dateStr) return null
 
+    // Try different date formats
+    // Format: DD/MM/YYYY
     let match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
     if (match) {
       const [, day, month, year] = match
       return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
     }
 
+    // Format: YYYY-MM-DD
     match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/)
     if (match) {
       return dateStr
     }
 
+    // Format: DD-MM-YYYY
     match = dateStr.match(/(\d{1,2})-(\d{1,2})-(\d{4})/)
     if (match) {
       const [, day, month, year] = match
@@ -234,10 +212,10 @@ export function SettingsPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-6">
-        {/* Price Editor - Purchase Prices */}
+        {/* Price Editor */}
         <div className="space-y-4">
-          <h3 className="font-medium text-sm text-muted-foreground">Precios de Compra (USD)</h3>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+          <h3 className="font-medium text-sm text-muted-foreground">Precios de Gift Cards (USD)</h3>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="price400" className="text-sm">
                 400 Robux (USD)
@@ -264,73 +242,23 @@ export function SettingsPanel({
                 className="h-10 sm:h-9"
               />
             </div>
-          </div>
-          <Button onClick={handleSavePrices} className="w-full sm:w-auto">
-            <Save className="h-4 w-4 mr-2" />
-            Guardar Precios de Compra
-          </Button>
-        </div>
-
-        {/* Sale Prices Section */}
-        <div className="border-t pt-6 space-y-4">
-          <h3 className="font-medium text-sm text-muted-foreground">Precios de Venta MercadoLibre (ARS)</h3>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="mlPrice400" className="text-sm">
-                Precio 400 Robux
+              <Label htmlFor="price1000" className="text-sm">
+                1000 Robux (USD)
               </Label>
               <Input
-                id="mlPrice400"
-                type="number"
-                step="1"
-                value={mlPrice400}
-                onChange={(e) => setMlPrice400(e.target.value)}
-                className="h-10 sm:h-9"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mlPrice800" className="text-sm">
-                Precio 800 Robux
-              </Label>
-              <Input
-                id="mlPrice800"
-                type="number"
-                step="1"
-                value={mlPrice800}
-                onChange={(e) => setMlPrice800(e.target.value)}
-                className="h-10 sm:h-9"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mlCommission400" className="text-sm">
-                Comisión 400 Robux
-              </Label>
-              <Input
-                id="mlCommission400"
+                id="price1000"
                 type="number"
                 step="0.01"
-                value={mlCommission400}
-                onChange={(e) => setMlCommission400(e.target.value)}
-                className="h-10 sm:h-9"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mlCommission800" className="text-sm">
-                Comisión 800 Robux
-              </Label>
-              <Input
-                id="mlCommission800"
-                type="number"
-                step="0.01"
-                value={mlCommission800}
-                onChange={(e) => setMlCommission800(e.target.value)}
+                value={price1000}
+                onChange={(e) => setPrice1000(e.target.value)}
                 className="h-10 sm:h-9"
               />
             </div>
           </div>
-          <Button onClick={handleSaveSalePrices} className="w-full sm:w-auto">
+          <Button onClick={handleSavePrices} className="w-full sm:w-auto">
             <Save className="h-4 w-4 mr-2" />
-            Guardar Precios de Venta
+            Guardar Precios
           </Button>
         </div>
 
