@@ -6,19 +6,28 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, CheckCircle, Copy, ExternalLink, RefreshCw } from "lucide-react"
-import { getSheetConfig, saveSheetConfig, testConnection, GOOGLE_APPS_SCRIPT_CODE } from "@/lib/google-sheets"
+import { AlertCircle, CheckCircle, Copy, ExternalLink, RefreshCw, Database } from "lucide-react"
+import {
+  getSheetConfig,
+  saveSheetConfig,
+  testConnection,
+  migrateFromVisualSheets,
+  GOOGLE_APPS_SCRIPT_CODE,
+} from "@/lib/google-sheets"
 
 interface GoogleSheetsSetupProps {
   onConnectionChange: (connected: boolean, webAppUrl: string | null) => void
+  onDataMigrated?: () => void
 }
 
-export function GoogleSheetsSetup({ onConnectionChange }: GoogleSheetsSetupProps) {
+export function GoogleSheetsSetup({ onConnectionChange, onDataMigrated }: GoogleSheetsSetupProps) {
   const [webAppUrl, setWebAppUrl] = useState("")
   const [isConnected, setIsConnected] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
+  const [isMigrating, setIsMigrating] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [migrationResult, setMigrationResult] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -52,6 +61,33 @@ export function GoogleSheetsSetup({ onConnectionChange }: GoogleSheetsSetupProps
     }
   }
 
+  const handleMigration = async () => {
+    if (!webAppUrl) return
+    setIsMigrating(true)
+    setMigrationResult(null)
+    setError(null)
+    try {
+      const result = await migrateFromVisualSheets(webAppUrl)
+      if (result) {
+        const total = (result.purchases?.length || 0) + (result.sales?.length || 0)
+        if (total > 0) {
+          setMigrationResult(
+            `Se migraron ${result.purchases?.length || 0} compras y ${result.sales?.length || 0} ventas`,
+          )
+          onDataMigrated?.()
+        } else {
+          setMigrationResult("No se encontraron datos para migrar en las hojas Compras/Ventas")
+        }
+      } else {
+        setError("Error al migrar datos. Asegúrate de que el script esté actualizado.")
+      }
+    } catch (err) {
+      setError("Error al migrar: " + (err as Error).message)
+    } finally {
+      setIsMigrating(false)
+    }
+  }
+
   const handleConnect = () => {
     if (webAppUrl.trim()) {
       handleTestConnection(webAppUrl.trim())
@@ -71,7 +107,6 @@ export function GoogleSheetsSetup({ onConnectionChange }: GoogleSheetsSetupProps
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      // Fallback para cuando clipboard no está disponible
       const textArea = document.createElement("textarea")
       textArea.value = GOOGLE_APPS_SCRIPT_CODE
       document.body.appendChild(textArea)
@@ -208,10 +243,25 @@ export function GoogleSheetsSetup({ onConnectionChange }: GoogleSheetsSetupProps
             <p className="text-sm text-muted-foreground">
               Los datos se sincronizan automáticamente con tu Google Sheet.
             </p>
+            {migrationResult && <p className="text-sm text-green-600 bg-green-50 p-2 rounded">{migrationResult}</p>}
+            {error && <p className="text-sm text-destructive whitespace-pre-line">{error}</p>}
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" onClick={() => handleTestConnection(webAppUrl)}>
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Probar conexión
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleMigration} disabled={isMigrating}>
+                {isMigrating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Migrando...
+                  </>
+                ) : (
+                  <>
+                    <Database className="w-4 h-4 mr-2" />
+                    Migrar datos existentes
+                  </>
+                )}
               </Button>
               <Button variant="outline" size="sm" onClick={handleDisconnect}>
                 Desconectar
@@ -230,6 +280,10 @@ export function GoogleSheetsSetup({ onConnectionChange }: GoogleSheetsSetupProps
                 Abrir Sheet
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Si no ves tus datos, haz click en "Migrar datos existentes" para recuperar los datos de las hojas Compras
+              y Ventas.
+            </p>
           </div>
         )}
       </CardContent>

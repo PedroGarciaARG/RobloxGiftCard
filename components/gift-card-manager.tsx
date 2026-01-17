@@ -136,6 +136,12 @@ export function GiftCardManager() {
     }
   }
 
+  const handleDataMigrated = () => {
+    if (sheetsUrl) {
+      loadFromSheets(sheetsUrl)
+    }
+  }
+
   const handleSync = () => {
     if (sheetsUrl) {
       loadFromSheets(sheetsUrl)
@@ -303,7 +309,7 @@ export function GiftCardManager() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
-          <GoogleSheetsSetup onConnectionChange={handleConnectionChange} />
+          <GoogleSheetsSetup onConnectionChange={handleConnectionChange} onDataMigrated={handleDataMigrated} />
           <SettingsPanel cardPrices={cardPrices} onUpdatePrices={updateCardPrices} onImportData={importData} />
         </TabsContent>
       </Tabs>

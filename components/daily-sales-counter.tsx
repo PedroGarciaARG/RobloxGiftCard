@@ -8,8 +8,14 @@ interface DailySalesCounterProps {
   sales: Sale[]
 }
 
-function normalizeDate(dateStr: string): string {
+function normalizeDate(dateStr: string): string | null {
+  if (!dateStr || dateStr.trim() === "") {
+    return null
+  }
   const date = new Date(dateStr)
+  if (isNaN(date.getTime())) {
+    return null
+  }
   return date.toISOString().split("T")[0]
 }
 
