@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { Sale, Purchase } from "@/lib/types"
 
 interface SaleFormProps {
-  onAddSale: (sale: Sale) => void
+  onAddSales: (sales: Sale[]) => void
   purchases: Purchase[]
   sales: Sale[]
 }
@@ -37,7 +37,7 @@ function getLocalDateString() {
   return `${year}-${month}-${day}`
 }
 
-export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
+export function SaleForm({ onAddSales, purchases, sales }: SaleFormProps) {
   const [cardType, setCardType] = useState<"400" | "800" | "1000">("400")
   const [quantity, setQuantity] = useState(1)
   const [date, setDate] = useState(getLocalDateString())
@@ -108,6 +108,7 @@ export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
       return
     }
 
+    const salesToAdd: Sale[] = []
     for (let i = 0; i < quantity; i++) {
       const sale: Sale = {
         id: crypto.randomUUID(),
@@ -122,8 +123,11 @@ export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
         createdAt: new Date().toISOString(),
         quantity: 1,
       }
-      onAddSale(sale)
+      salesToAdd.push(sale)
     }
+
+    // Send all sales at once
+    onAddSales(salesToAdd)
 
     setQuantity(1)
     setCustomPrice("")

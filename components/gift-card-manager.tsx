@@ -178,14 +178,14 @@ export function GiftCardManager() {
     }
   }
 
-  const addPurchase = async (purchase: Purchase) => {
-    const newPurchases = [...purchases, purchase]
+  const addPurchases = async (newPurchasesToAdd: Purchase[]) => {
+    const newPurchases = [...purchases, ...newPurchasesToAdd]
     setPurchases(newPurchases)
     await syncToSheets(newPurchases, sales, cardPrices)
   }
 
-  const addSale = async (sale: Sale) => {
-    const newSales = [...sales, sale]
+  const addSales = async (newSalesToAdd: Sale[]) => {
+    const newSales = [...sales, ...newSalesToAdd]
     setSales(newSales)
     await syncToSheets(purchases, newSales, cardPrices)
   }
@@ -337,11 +337,11 @@ export function GiftCardManager() {
         </div>
 
         <TabsContent value="purchases">
-          <PurchaseForm onAddPurchase={addPurchase} cardPrices={cardPrices} />
+          <PurchaseForm onAddPurchases={addPurchases} cardPrices={cardPrices} />
         </TabsContent>
 
         <TabsContent value="sales">
-          <SaleForm onAddSale={addSale} purchases={purchases} sales={sales} />
+          <SaleForm onAddSales={addSales} purchases={purchases} sales={sales} />
         </TabsContent>
 
         <TabsContent value="history">

@@ -12,7 +12,7 @@ import { getExchangeRate } from "@/lib/exchange-rate"
 import type { Purchase } from "@/lib/types"
 
 interface PurchaseFormProps {
-  onAddPurchase: (purchase: Purchase) => void
+  onAddPurchases: (purchases: Purchase[]) => void
   cardPrices: { [key: number]: number }
 }
 
@@ -30,7 +30,7 @@ function getLocalDateString() {
   return `${year}-${month}-${day}`
 }
 
-export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
+export function PurchaseForm({ onAddPurchases, cardPrices }: PurchaseFormProps) {
   const [cardType, setCardType] = useState<"400" | "800" | "1000">("400")
   const [quantity, setQuantity] = useState(1)
   const [date, setDate] = useState(getLocalDateString())
@@ -86,6 +86,7 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
     const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : getPrice(cardTypeNum)
     const costARS = priceUSD * rate
 
+    const purchasesToAdd: Purchase[] = []
     for (let i = 0; i < quantity; i++) {
       const purchase: Purchase = {
         id: crypto.randomUUID(),
@@ -97,8 +98,11 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
         purchaseDate: date,
         createdAt: new Date().toISOString(),
       }
-      onAddPurchase(purchase)
+      purchasesToAdd.push(purchase)
     }
+
+    // Send all purchases at once
+    onAddPurchases(purchasesToAdd)
 
     setQuantity(1)
     setExchangeRate(null)
