@@ -29,10 +29,18 @@ const DEFAULT_ML_PRICE = {
   1000: 34999,
 }
 
+function getLocalDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export function SaleForm({ onAddSale, purchases, sales }: SaleFormProps) {
   const [cardType, setCardType] = useState<"400" | "800" | "1000">("400")
   const [quantity, setQuantity] = useState(1)
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  const [date, setDate] = useState(getLocalDateString())
   const [platform, setPlatform] = useState<"mercadolibre" | "direct" | "lost">("mercadolibre")
   const [customPrice, setCustomPrice] = useState("")
   const [cardCode, setCardCode] = useState("")

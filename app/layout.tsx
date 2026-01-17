@@ -7,24 +7,11 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Roblox Argentina - Gift Card Manager",
+  title: "Roblox Argentina",
   description: "Gestiona tus compras y ventas de gift cards de Roblox - @ROBLOX_ARGENTINA_OK",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: "/images/whatsapp-20image-202026-01-17-20at-2011.jpeg",
+    apple: "/images/whatsapp-20image-202026-01-17-20at-2011.jpeg",
   },
     generator: 'v0.app'
 }

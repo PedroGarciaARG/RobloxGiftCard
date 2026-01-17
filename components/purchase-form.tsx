@@ -22,10 +22,18 @@ const DEFAULT_PRICES: { [key: number]: number } = {
   1000: 10,
 }
 
+function getLocalDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
   const [cardType, setCardType] = useState<"400" | "800" | "1000">("400")
   const [quantity, setQuantity] = useState(1)
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  const [date, setDate] = useState(getLocalDateString())
   const [isLoading, setIsLoading] = useState(false)
   const [exchangeRate, setExchangeRate] = useState<number | null>(null)
   const [customRate, setCustomRate] = useState("")
