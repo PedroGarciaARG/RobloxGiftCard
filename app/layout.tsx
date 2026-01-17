@@ -7,8 +7,8 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Roblox Gift Card Manager",
-  description: "Gestiona tus compras y ventas de gift cards de Roblox",
+  title: "Roblox Argentina - Gift Card Manager",
+  description: "Gestiona tus compras y ventas de gift cards de Roblox - @ROBLOX_ARGENTINA_OK",
   icons: {
     icon: [
       {
@@ -34,7 +34,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#ffffff",
+  themeColor: "#000000",
 }
 
 export default function RootLayout({
@@ -43,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" className="dark">
       <body className={`font-sans antialiased`}>{children}</body>
     </html>
   )

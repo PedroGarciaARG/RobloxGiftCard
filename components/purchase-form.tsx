@@ -16,6 +16,12 @@ interface PurchaseFormProps {
   cardPrices: { [key: number]: number }
 }
 
+const DEFAULT_PRICES: { [key: number]: number } = {
+  400: 5.17,
+  800: 10.34,
+  1000: 10,
+}
+
 export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
   const [cardType, setCardType] = useState<"400" | "800" | "1000">("400")
   const [quantity, setQuantity] = useState(1)
@@ -24,6 +30,8 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null)
   const [customRate, setCustomRate] = useState("")
   const [customPriceUSD, setCustomPriceUSD] = useState("")
+
+  const getPrice = (type: number) => cardPrices[type] ?? DEFAULT_PRICES[type] ?? 10
 
   const fetchRate = async () => {
     setIsLoading(true)
@@ -47,7 +55,7 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
     }
 
     const cardTypeNum = Number.parseInt(cardType) as 400 | 800 | 1000
-    const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : cardPrices[cardTypeNum]
+    const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : getPrice(cardTypeNum)
     const costARS = priceUSD * rate
 
     for (let i = 0; i < quantity; i++) {
@@ -70,7 +78,7 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
   }
 
   const cardTypeNum = Number.parseInt(cardType) as 400 | 800 | 1000
-  const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : cardPrices[cardTypeNum]
+  const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : getPrice(cardTypeNum)
   const estimatedCost = customRate
     ? priceUSD * Number.parseFloat(customRate) * quantity
     : exchangeRate
@@ -79,7 +87,7 @@ export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
 
   const handleCardTypeChange = (v: "400" | "800" | "1000") => {
     setCardType(v)
-    setCustomPriceUSD(cardPrices[Number.parseInt(v) as 400 | 800 | 1000].toString())
+    setCustomPriceUSD(getPrice(Number.parseInt(v)).toString())
   }
 
   return (

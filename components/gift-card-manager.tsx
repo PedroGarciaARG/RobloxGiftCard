@@ -14,11 +14,12 @@ import { saveAllData, loadAllData, getSheetConfig } from "@/lib/google-sheets"
 import type { Purchase, Sale } from "@/lib/types"
 import { RefreshCw, Cloud, CloudOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
 
 const DEFAULT_CARD_PRICES = {
   400: 5.17,
   800: 10.34,
-  1000: 10, // Added new 1000 Robux card type (10 USD)
+  1000: 10,
 }
 
 export function GiftCardManager() {
@@ -63,7 +64,7 @@ export function GiftCardManager() {
         setSales(data.sales || [])
         if (data.cardPrices && Object.keys(data.cardPrices).length > 0) {
           // Convertir claves string a number
-          const prices: { [key: number]: number } = {}
+          const prices: { [key: number]: number } = { ...DEFAULT_CARD_PRICES } // Start with defaults
           Object.entries(data.cardPrices).forEach(([key, value]) => {
             prices[Number(key)] = Number(value)
           })
@@ -90,7 +91,10 @@ export function GiftCardManager() {
 
     if (savedPurchases) setPurchases(JSON.parse(savedPurchases))
     if (savedSales) setSales(JSON.parse(savedSales))
-    if (savedPrices) setCardPrices(JSON.parse(savedPrices))
+    if (savedPrices) {
+      const loaded = JSON.parse(savedPrices)
+      setCardPrices({ ...DEFAULT_CARD_PRICES, ...loaded })
+    }
   }
 
   useEffect(() => {
@@ -189,8 +193,15 @@ export function GiftCardManager() {
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-pulse text-muted-foreground">Cargando...</div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black">
+        <Image
+          src="/images/whatsapp-20image-202026-01-17-20at-2011.jpeg"
+          alt="Roblox Argentina"
+          width={200}
+          height={100}
+          className="mb-4"
+        />
+        <div className="animate-pulse text-sky-400">Cargando...</div>
       </div>
     )
   }
@@ -199,9 +210,18 @@ export function GiftCardManager() {
     <div className="container mx-auto py-4 px-3 sm:py-8 sm:px-4 max-w-6xl">
       <header className="mb-6 sm:mb-8">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Roblox Gift Cards</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Balance de compras y ventas</p>
+          <div className="flex items-center gap-4">
+            <Image
+              src="/images/whatsapp-20image-202026-01-17-20at-2011.jpeg"
+              alt="Roblox Argentina"
+              width={120}
+              height={60}
+              className="rounded-lg"
+            />
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Gift Card Manager</h1>
+              <p className="text-xs sm:text-sm text-sky-400">@ROBLOX_ARGENTINA_OK</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {isConnectedToSheets ? (
@@ -212,9 +232,15 @@ export function GiftCardManager() {
               <CloudOff className="w-4 h-4 text-muted-foreground" />
             )}
             {isConnectedToSheets && (
-              <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="border-sky-500/50 hover:bg-sky-500/10 bg-transparent"
+              >
                 <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
-                {isSyncing ? "Sincronizando..." : "Sincronizar"}
+                <span className="hidden sm:inline">{isSyncing ? "Sincronizando..." : "Sincronizar"}</span>
               </Button>
             )}
           </div>
@@ -228,17 +254,29 @@ export function GiftCardManager() {
 
       <Tabs defaultValue="purchases" className="mt-6 sm:mt-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:flex">
-            <TabsTrigger value="purchases" className="text-xs sm:text-sm">
+          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:flex bg-secondary">
+            <TabsTrigger
+              value="purchases"
+              className="text-xs sm:text-sm data-[state=active]:bg-sky-500 data-[state=active]:text-white"
+            >
               Compras
             </TabsTrigger>
-            <TabsTrigger value="sales" className="text-xs sm:text-sm">
+            <TabsTrigger
+              value="sales"
+              className="text-xs sm:text-sm data-[state=active]:bg-sky-500 data-[state=active]:text-white"
+            >
               Ventas
             </TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm">
+            <TabsTrigger
+              value="history"
+              className="text-xs sm:text-sm data-[state=active]:bg-sky-500 data-[state=active]:text-white"
+            >
               Historial
             </TabsTrigger>
-            <TabsTrigger value="settings" className="text-xs sm:text-sm">
+            <TabsTrigger
+              value="settings"
+              className="text-xs sm:text-sm data-[state=active]:bg-sky-500 data-[state=active]:text-white"
+            >
               Config
             </TabsTrigger>
           </TabsList>
