@@ -278,9 +278,32 @@ export function TransactionHistory({
                             )}
                           </p>
                           {sale.buyerName && (
-                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
-                              Comprador: {sale.buyerName}
-                            </p>
+                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                              <p>Comprador: {sale.buyerName}</p>
+                              {sale.buyerDNI && <p className="text-muted-foreground">DNI: {sale.buyerDNI}</p>}
+                              {(sale.buyerCity || sale.buyerState) && (
+                                <p className="text-muted-foreground text-[10px]">
+                                  {[sale.buyerCity, sale.buyerState, sale.buyerCountry].filter(Boolean).join(", ")}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          {/* ML fees breakdown */}
+                          {sale.platform === "mercadolibre" && (sale.mlCargoVenta || sale.mlImpuestos) && (
+                            <div className="flex flex-wrap gap-x-2 mt-1 text-[10px]">
+                              {sale.mlCargoVenta && sale.mlCargoVenta > 0 && (
+                                <span className="text-red-500">Cargo: -${sale.mlCargoVenta.toLocaleString("es-AR")}</span>
+                              )}
+                              {sale.mlCostoFijo && sale.mlCostoFijo > 0 && (
+                                <span className="text-red-500">Fijo: -${sale.mlCostoFijo.toLocaleString("es-AR")}</span>
+                              )}
+                              {sale.mlImpuestos && sale.mlImpuestos > 0 && (
+                                <span className="text-orange-500">Imp: -${sale.mlImpuestos.toLocaleString("es-AR")}</span>
+                              )}
+                              {sale.mlCostoEnvio && sale.mlCostoEnvio > 0 && (
+                                <span className="text-yellow-500">Envío: -${sale.mlCostoEnvio.toLocaleString("es-AR")}</span>
+                              )}
+                            </div>
                           )}
                           {sale.cardCode && (
                             <div className="flex items-center gap-1 mt-1">

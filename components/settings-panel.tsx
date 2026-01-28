@@ -10,32 +10,92 @@ import { Settings, Save, Upload } from "lucide-react"
 import type { Purchase, Sale } from "@/lib/types"
 
 interface SettingsPanelProps {
-  cardPrices: { [key: number]: number }
-  onUpdatePrices: (prices: { [key: number]: number }) => void
+  cardPrices: { [key: string]: number }
+  salePricesARS: { [key: string]: number }
+  mlCommissions: { [key: string]: number }
+  onUpdateAllPrices: (
+    purchasePrices: { [key: string]: number },
+    salePrices: { [key: string]: number },
+    commissions: { [key: string]: number }
+  ) => void
   onImportData: (purchases: Purchase[], sales: Sale[]) => void
 }
 
-export function SettingsPanel({ cardPrices, onUpdatePrices, onImportData }: SettingsPanelProps) {
-  const [price400, setPrice400] = useState(cardPrices[400]?.toString() || "5.17")
-  const [price800, setPrice800] = useState(cardPrices[800]?.toString() || "10.34")
-  const [price1000, setPrice1000] = useState(cardPrices[1000]?.toString() || "10")
+export function SettingsPanel({ cardPrices, salePricesARS, mlCommissions, onUpdateAllPrices, onImportData }: SettingsPanelProps) {
+  // Purchase prices (USD)
+  const [price400, setPrice400] = useState(cardPrices["400"]?.toString() || "5.17")
+  const [price800, setPrice800] = useState(cardPrices["800"]?.toString() || "10.34")
+  const [price1000, setPrice1000] = useState(cardPrices["1000"]?.toString() || "10")
+  const [priceSteam5, setPriceSteam5] = useState(cardPrices["steam5"]?.toString() || "5")
+  const [priceSteam10, setPriceSteam10] = useState(cardPrices["steam10"]?.toString() || "11")
+  
+  // Sale prices (ARS)
+  const [salePrice400, setSalePrice400] = useState(salePricesARS["400"]?.toString() || "13999")
+  const [salePrice800, setSalePrice800] = useState(salePricesARS["800"]?.toString() || "27999")
+  const [salePrice1000, setSalePrice1000] = useState(salePricesARS["1000"]?.toString() || "34999")
+  const [salePriceSteam5, setSalePriceSteam5] = useState(salePricesARS["steam5"]?.toString() || "11999")
+  const [salePriceSteam10, setSalePriceSteam10] = useState(salePricesARS["steam10"]?.toString() || "24999")
+  
+  // ML Commissions (ARS)
+  const [commission400, setCommission400] = useState(mlCommissions["400"]?.toString() || "3284.84")
+  const [commission800, setCommission800] = useState(mlCommissions["800"]?.toString() || "6995")
+  const [commission1000, setCommission1000] = useState(mlCommissions["1000"]?.toString() || "8500")
+  const [commissionSteam5, setCommissionSteam5] = useState(mlCommissions["steam5"]?.toString() || "2800")
+  const [commissionSteam10, setCommissionSteam10] = useState(mlCommissions["steam10"]?.toString() || "5800")
+  
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {
-    setPrice400(cardPrices[400]?.toString() || "5.17")
-    setPrice800(cardPrices[800]?.toString() || "10.34")
-    setPrice1000(cardPrices[1000]?.toString() || "10")
+    setPrice400(cardPrices["400"]?.toString() || "5.17")
+    setPrice800(cardPrices["800"]?.toString() || "10.34")
+    setPrice1000(cardPrices["1000"]?.toString() || "10")
+    setPriceSteam5(cardPrices["steam5"]?.toString() || "5")
+    setPriceSteam10(cardPrices["steam10"]?.toString() || "11")
   }, [cardPrices])
 
+  useEffect(() => {
+    setSalePrice400(salePricesARS["400"]?.toString() || "13999")
+    setSalePrice800(salePricesARS["800"]?.toString() || "27999")
+    setSalePrice1000(salePricesARS["1000"]?.toString() || "34999")
+    setSalePriceSteam5(salePricesARS["steam5"]?.toString() || "11999")
+    setSalePriceSteam10(salePricesARS["steam10"]?.toString() || "24999")
+  }, [salePricesARS])
+
+  useEffect(() => {
+    setCommission400(mlCommissions["400"]?.toString() || "3284.84")
+    setCommission800(mlCommissions["800"]?.toString() || "6995")
+    setCommission1000(mlCommissions["1000"]?.toString() || "8500")
+    setCommissionSteam5(mlCommissions["steam5"]?.toString() || "2800")
+    setCommissionSteam10(mlCommissions["steam10"]?.toString() || "5800")
+  }, [mlCommissions])
+
   const handleSavePrices = () => {
-    const newPrices = {
-      400: Number.parseFloat(price400) || 5.17,
-      800: Number.parseFloat(price800) || 10.34,
-      1000: Number.parseFloat(price1000) || 10,
+    const purchasePrices: { [key: string]: number } = {
+      "400": Number.parseFloat(price400) || 5.17,
+      "800": Number.parseFloat(price800) || 10.34,
+      "1000": Number.parseFloat(price1000) || 10,
+      "steam5": Number.parseFloat(priceSteam5) || 5,
+      "steam10": Number.parseFloat(priceSteam10) || 11,
     }
-    onUpdatePrices(newPrices)
-    alert("Precios actualizados correctamente")
+    const salePrices: { [key: string]: number } = {
+      "400": Number.parseFloat(salePrice400) || 13999,
+      "800": Number.parseFloat(salePrice800) || 27999,
+      "1000": Number.parseFloat(salePrice1000) || 34999,
+      "steam5": Number.parseFloat(salePriceSteam5) || 11999,
+      "steam10": Number.parseFloat(salePriceSteam10) || 24999,
+    }
+    const commissions: { [key: string]: number } = {
+      "400": Number.parseFloat(commission400) || 3284.84,
+      "800": Number.parseFloat(commission800) || 6995,
+      "1000": Number.parseFloat(commission1000) || 8500,
+      "steam5": Number.parseFloat(commissionSteam5) || 2800,
+      "steam10": Number.parseFloat(commissionSteam10) || 5800,
+    }
+    onUpdateAllPrices(purchasePrices, salePrices, commissions)
+    setSaveSuccess(true)
+    setTimeout(() => setSaveSuccess(false), 3000)
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,13 +272,13 @@ export function SettingsPanel({ cardPrices, onUpdatePrices, onImportData }: Sett
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-6">
-        {/* Price Editor */}
+        {/* Purchase Prices (USD) */}
         <div className="space-y-4">
-          <h3 className="font-medium text-sm text-muted-foreground">Precios de Gift Cards (USD)</h3>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          <h3 className="font-medium text-sm text-muted-foreground">Precios de Compra (USD)</h3>
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
             <div className="space-y-2">
-              <Label htmlFor="price400" className="text-sm">
-                400 Robux (USD)
+              <Label htmlFor="price400" className="text-xs">
+                400 Robux
               </Label>
               <Input
                 id="price400"
@@ -230,8 +290,8 @@ export function SettingsPanel({ cardPrices, onUpdatePrices, onImportData }: Sett
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="price800" className="text-sm">
-                800 Robux (USD)
+              <Label htmlFor="price800" className="text-xs">
+                800 Robux
               </Label>
               <Input
                 id="price800"
@@ -243,8 +303,8 @@ export function SettingsPanel({ cardPrices, onUpdatePrices, onImportData }: Sett
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="price1000" className="text-sm">
-                1000 Robux (USD)
+              <Label htmlFor="price1000" className="text-xs">
+                1000 Robux
               </Label>
               <Input
                 id="price1000"
@@ -255,11 +315,189 @@ export function SettingsPanel({ cardPrices, onUpdatePrices, onImportData }: Sett
                 className="h-10 sm:h-9"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="priceSteam5" className="text-xs">
+                Steam $5
+              </Label>
+              <Input
+                id="priceSteam5"
+                type="number"
+                step="0.01"
+                value={priceSteam5}
+                onChange={(e) => setPriceSteam5(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="priceSteam10" className="text-xs">
+                Steam $10
+              </Label>
+              <Input
+                id="priceSteam10"
+                type="number"
+                step="0.01"
+                value={priceSteam10}
+                onChange={(e) => setPriceSteam10(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
           </div>
+        </div>
+
+        {/* Sale Prices (ARS) */}
+        <div className="space-y-4 border-t pt-4">
+          <h3 className="font-medium text-sm text-muted-foreground">Precios de Venta ML (ARS)</h3>
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="space-y-2">
+              <Label htmlFor="salePrice400" className="text-xs">
+                400 Robux
+              </Label>
+              <Input
+                id="salePrice400"
+                type="number"
+                step="1"
+                value={salePrice400}
+                onChange={(e) => setSalePrice400(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salePrice800" className="text-xs">
+                800 Robux
+              </Label>
+              <Input
+                id="salePrice800"
+                type="number"
+                step="1"
+                value={salePrice800}
+                onChange={(e) => setSalePrice800(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salePrice1000" className="text-xs">
+                1000 Robux
+              </Label>
+              <Input
+                id="salePrice1000"
+                type="number"
+                step="1"
+                value={salePrice1000}
+                onChange={(e) => setSalePrice1000(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salePriceSteam5" className="text-xs">
+                Steam $5
+              </Label>
+              <Input
+                id="salePriceSteam5"
+                type="number"
+                step="1"
+                value={salePriceSteam5}
+                onChange={(e) => setSalePriceSteam5(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salePriceSteam10" className="text-xs">
+                Steam $10
+              </Label>
+              <Input
+                id="salePriceSteam10"
+                type="number"
+                step="1"
+                value={salePriceSteam10}
+                onChange={(e) => setSalePriceSteam10(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ML Commissions (ARS) */}
+        <div className="space-y-4 border-t pt-4">
+          <h3 className="font-medium text-sm text-muted-foreground">Comisiones ML (ARS)</h3>
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="space-y-2">
+              <Label htmlFor="commission400" className="text-xs">
+                400 Robux
+              </Label>
+              <Input
+                id="commission400"
+                type="number"
+                step="0.01"
+                value={commission400}
+                onChange={(e) => setCommission400(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="commission800" className="text-xs">
+                800 Robux
+              </Label>
+              <Input
+                id="commission800"
+                type="number"
+                step="0.01"
+                value={commission800}
+                onChange={(e) => setCommission800(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="commission1000" className="text-xs">
+                1000 Robux
+              </Label>
+              <Input
+                id="commission1000"
+                type="number"
+                step="0.01"
+                value={commission1000}
+                onChange={(e) => setCommission1000(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="commissionSteam5" className="text-xs">
+                Steam $5
+              </Label>
+              <Input
+                id="commissionSteam5"
+                type="number"
+                step="0.01"
+                value={commissionSteam5}
+                onChange={(e) => setCommissionSteam5(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="commissionSteam10" className="text-xs">
+                Steam $10
+              </Label>
+              <Input
+                id="commissionSteam10"
+                type="number"
+                step="0.01"
+                value={commissionSteam10}
+                onChange={(e) => setCommissionSteam10(e.target.value)}
+                className="h-10 sm:h-9"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 border-t pt-4">
           <Button onClick={handleSavePrices} className="w-full sm:w-auto">
             <Save className="h-4 w-4 mr-2" />
-            Guardar Precios
+            Guardar Todos los Precios
           </Button>
+          {saveSuccess && (
+            <div className="flex items-center text-sm text-green-600">
+              Precios guardados correctamente
+            </div>
+          )}
         </div>
 
         {/* Import Section */}

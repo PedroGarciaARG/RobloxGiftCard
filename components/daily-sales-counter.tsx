@@ -42,6 +42,8 @@ export function DailySalesCounter({ sales }: DailySalesCounterProps) {
     400: todaySales.filter((s) => s.cardType === 400).reduce((sum, s) => sum + s.quantity, 0),
     800: todaySales.filter((s) => s.cardType === 800).reduce((sum, s) => sum + s.quantity, 0),
     1000: todaySales.filter((s) => s.cardType === 1000).reduce((sum, s) => sum + s.quantity, 0),
+    steam5: todaySales.filter((s) => s.cardType === "steam5").reduce((sum, s) => sum + s.quantity, 0),
+    steam10: todaySales.filter((s) => s.cardType === "steam10").reduce((sum, s) => sum + s.quantity, 0),
   }
 
   return (
@@ -60,8 +62,20 @@ export function DailySalesCounter({ sales }: DailySalesCounterProps) {
           <TrendingUp className="h-3.5 w-3.5" />
           <span>${todayRevenue.toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>
         </div>
-        <div className="mt-2 text-xs text-sky-400">
-          400R: {todayByType[400]} | 800R: {todayByType[800]} | 10USD: {todayByType[1000]}
+        <div className="mt-2 text-[10px] sm:text-xs text-sky-400 flex flex-wrap gap-x-1 gap-y-0.5">
+          <span>400R: {todayByType[400]}</span>
+          <span>|</span>
+          <span>800R: {todayByType[800]}</span>
+          <span>|</span>
+          <span>10USD: {todayByType[1000]}</span>
+          {(todayByType.steam5 > 0 || todayByType.steam10 > 0) && (
+            <>
+              <span>|</span>
+              <span>S$5: {todayByType.steam5}</span>
+              <span>|</span>
+              <span>S$10: {todayByType.steam10}</span>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>

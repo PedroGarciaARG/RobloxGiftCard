@@ -2,24 +2,26 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getExchangeRate } from "@/lib/exchange-rate"
-import type { Purchase } from "@/lib/types"
+import type { Purchase, CardType } from "@/lib/types"
 
 interface PurchaseFormProps {
-  onAddPurchases: (purchases: Purchase[]) => void
-  cardPrices: { [key: number]: number }
+  onAddPurchase: (purchases: Purchase[]) => void
+  cardPrices: { [key: string]: number }
 }
 
-const DEFAULT_PRICES: { [key: number]: number } = {
+const DEFAULT_PRICES: { [key: string]: number } = {
   400: 5.17,
   800: 10.34,
   1000: 10,
+  steam5: 5,
+  steam10: 11,
 }
 
 function getLocalDateString() {
@@ -30,36 +32,16 @@ function getLocalDateString() {
   return `${year}-${month}-${day}`
 }
 
-export function PurchaseForm({ onAddPurchases, cardPrices }: PurchaseFormProps) {
-  const [cardType, setCardType] = useState<"400" | "800" | "1000">("400")
+export function PurchaseForm({ onAddPurchase, cardPrices }: PurchaseFormProps) {
+  const [cardType, setCardType] = useState<string>("400")
   const [quantity, setQuantity] = useState(1)
   const [date, setDate] = useState(getLocalDateString())
   const [isLoading, setIsLoading] = useState(false)
   const [exchangeRate, setExchangeRate] = useState<number | null>(null)
   const [customRate, setCustomRate] = useState("")
   const [customPriceUSD, setCustomPriceUSD] = useState("")
-  const [cardCodes, setCardCodes] = useState<string[]>([""])
 
-  const getPrice = (type: number) => cardPrices[type] ?? DEFAULT_PRICES[type] ?? 10
-
-  useEffect(() => {
-    setCardCodes((prev) => {
-      if (quantity > prev.length) {
-        return [...prev, ...Array(quantity - prev.length).fill("")]
-      } else if (quantity < prev.length) {
-        return prev.slice(0, quantity)
-      }
-      return prev
-    })
-  }, [quantity])
-
-  const updateCardCode = (index: number, value: string) => {
-    setCardCodes((prev) => {
-      const newCodes = [...prev]
-      newCodes[index] = value
-      return newCodes
-    })
-  }
+  const getPrice = (type: string) => cardPrices[type] ?? DEFAULT_PRICES[type] ?? 10
 
   const fetchRate = async () => {
     setIsLoading(true)
@@ -82,47 +64,44 @@ export function PurchaseForm({ onAddPurchases, cardPrices }: PurchaseFormProps) 
       return
     }
 
-    const cardTypeNum = Number.parseInt(cardType) as 400 | 800 | 1000
-    const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : getPrice(cardTypeNum)
+    const cardTypeValue: CardType = cardType.startsWith("steam") ? (cardType as CardType) : (Number.parseInt(cardType) as CardType)
+    const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : getPrice(cardType)
     const costARS = priceUSD * rate
 
-    const purchasesToAdd: Purchase[] = []
+    // Create all purchases at once
+    const newPurchases: Purchase[] = []
     for (let i = 0; i < quantity; i++) {
-      const purchase: Purchase = {
+      newPurchases.push({
         id: crypto.randomUUID(),
-        cardType: cardTypeNum,
-        cardCode: cardCodes[i]?.trim() || undefined,
+        cardType: cardTypeValue,
         priceUSD,
         exchangeRate: rate,
         costARS,
         purchaseDate: date,
         createdAt: new Date().toISOString(),
-      }
-      purchasesToAdd.push(purchase)
+      })
     }
-
-    // Send all purchases at once
-    onAddPurchases(purchasesToAdd)
+    onAddPurchase(newPurchases)
 
     setQuantity(1)
     setExchangeRate(null)
     setCustomRate("")
     setCustomPriceUSD("")
-    setCardCodes([""])
   }
 
-  const handleCardTypeChange = (v: "400" | "800" | "1000") => {
-    setCardType(v)
-    setCustomPriceUSD(getPrice(Number.parseInt(v)).toString())
-  }
-
-  const cardTypeNum = Number.parseInt(cardType) as 400 | 800 | 1000
-  const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : getPrice(cardTypeNum)
+  const priceUSD = customPriceUSD ? Number.parseFloat(customPriceUSD) : getPrice(cardType)
   const estimatedCost = customRate
     ? priceUSD * Number.parseFloat(customRate) * quantity
     : exchangeRate
       ? priceUSD * exchangeRate * quantity
       : 0
+
+  const handleCardTypeChange = (v: string) => {
+    setCardType(v)
+    setCustomPriceUSD(getPrice(v).toString())
+  }
+
+  const cardTypeNum = Number.parseInt(cardType)
 
   return (
     <Card>
@@ -144,6 +123,8 @@ export function PurchaseForm({ onAddPurchases, cardPrices }: PurchaseFormProps) 
                   <SelectItem value="400">400 Robux</SelectItem>
                   <SelectItem value="800">800 Robux</SelectItem>
                   <SelectItem value="1000">1000 Robux (10 USD)</SelectItem>
+                  <SelectItem value="steam5">Steam $5 USD</SelectItem>
+                  <SelectItem value="steam10">Steam $10 USD</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -156,7 +137,7 @@ export function PurchaseForm({ onAddPurchases, cardPrices }: PurchaseFormProps) 
                 id="priceUSD"
                 type="number"
                 step="0.01"
-                placeholder={cardPrices[cardTypeNum].toString()}
+                placeholder={cardPrices[cardType]?.toString() || ""}
                 value={customPriceUSD}
                 onChange={(e) => setCustomPriceUSD(e.target.value)}
                 className="h-10 sm:h-9"
@@ -211,22 +192,6 @@ export function PurchaseForm({ onAddPurchases, cardPrices }: PurchaseFormProps) 
                   {isLoading ? "..." : "Obtener"}
                 </Button>
               </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-sm">Números de Tarjeta ({quantity})</Label>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {cardCodes.map((code, index) => (
-                <Input
-                  key={index}
-                  type="text"
-                  placeholder={`Tarjeta ${index + 1}: XXXX-XXXX-XXXX`}
-                  value={code}
-                  onChange={(e) => updateCardCode(index, e.target.value)}
-                  className="h-10 sm:h-9"
-                />
-              ))}
             </div>
           </div>
 

@@ -5,10 +5,12 @@ import { TrendingUp, TrendingDown, DollarSign, CreditCard, AlertTriangle } from 
 import type { Purchase, Sale } from "@/lib/types"
 import Image from "next/image"
 
-const CARD_IMAGES = {
+const CARD_IMAGES: { [key: string]: string } = {
   400: "/images/400-20robux.jpeg",
   800: "/images/800-20robux.jpeg",
   1000: "/images/10-20usd.jpeg",
+  steam5: "/images/steam.jpeg",
+  steam10: "/images/steam.jpeg",
 }
 
 interface BalanceOverviewProps {
@@ -33,6 +35,8 @@ export function BalanceOverview({ purchases, sales }: BalanceOverviewProps) {
   const purchases400 = purchases.filter((p) => p.cardType === 400).length
   const purchases800 = purchases.filter((p) => p.cardType === 800).length
   const purchases1000 = purchases.filter((p) => p.cardType === 1000).length
+  const purchasesSteam5 = purchases.filter((p) => p.cardType === "steam5").length
+  const purchasesSteam10 = purchases.filter((p) => p.cardType === "steam10").length
 
   const sold400 = sales
     .filter((s) => s.cardType === 400 && s.platform !== "lost")
@@ -43,15 +47,25 @@ export function BalanceOverview({ purchases, sales }: BalanceOverviewProps) {
   const sold1000 = sales
     .filter((s) => s.cardType === 1000 && s.platform !== "lost")
     .reduce((sum, s) => sum + s.quantity, 0)
+  const soldSteam5 = sales
+    .filter((s) => s.cardType === "steam5" && s.platform !== "lost")
+    .reduce((sum, s) => sum + s.quantity, 0)
+  const soldSteam10 = sales
+    .filter((s) => s.cardType === "steam10" && s.platform !== "lost")
+    .reduce((sum, s) => sum + s.quantity, 0)
 
   const lost400 = lostCards.filter((s) => s.cardType === 400).length
   const lost800 = lostCards.filter((s) => s.cardType === 800).length
   const lost1000 = lostCards.filter((s) => s.cardType === 1000).length
+  const lostSteam5 = lostCards.filter((s) => s.cardType === "steam5").length
+  const lostSteam10 = lostCards.filter((s) => s.cardType === "steam10").length
 
   const available400 = purchases400 - sold400 - lost400
   const available800 = purchases800 - sold800 - lost800
   const available1000 = purchases1000 - sold1000 - lost1000
-  const totalAvailable = available400 + available800 + available1000
+  const availableSteam5 = purchasesSteam5 - soldSteam5 - lostSteam5
+  const availableSteam10 = purchasesSteam10 - soldSteam10 - lostSteam10
+  const totalAvailable = available400 + available800 + available1000 + availableSteam5 + availableSteam10
 
   const soldCards = actualSales.reduce((sum, s) => sum + s.quantity, 0)
   const lostCardsCount = lostCards.length
@@ -130,45 +144,71 @@ export function BalanceOverview({ purchases, sales }: BalanceOverviewProps) {
           </CardTitle>
           <span className="text-2xl font-bold text-amber-400">{totalAvailable}</span>
         </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <div className="grid grid-cols-3 gap-3">
+        <CardContent className="px-2 sm:px-4 pb-4">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
             {/* 400 Robux Card */}
-            <div className="flex flex-col items-center p-3 rounded-lg bg-secondary/50 border border-amber-500/20">
+            <div className="flex flex-col items-center p-2 sm:p-3 rounded-lg bg-secondary/50 border border-amber-500/20">
               <Image
                 src={CARD_IMAGES[400] || "/placeholder.svg"}
                 alt="400 Robux"
                 width={60}
                 height={80}
-                className="rounded-md mb-2 shadow-lg"
+                className="rounded-md mb-1 sm:mb-2 shadow-lg w-10 h-14 sm:w-[60px] sm:h-20 object-cover"
               />
-              <span className="text-xs text-muted-foreground">400 Robux</span>
-              <span className="text-xl font-bold text-amber-400">{available400}</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground text-center">400 Robux</span>
+              <span className="text-lg sm:text-xl font-bold text-amber-400">{available400}</span>
             </div>
 
             {/* 800 Robux Card */}
-            <div className="flex flex-col items-center p-3 rounded-lg bg-secondary/50 border border-amber-500/20">
+            <div className="flex flex-col items-center p-2 sm:p-3 rounded-lg bg-secondary/50 border border-amber-500/20">
               <Image
                 src={CARD_IMAGES[800] || "/placeholder.svg"}
                 alt="800 Robux"
                 width={60}
                 height={80}
-                className="rounded-md mb-2 shadow-lg"
+                className="rounded-md mb-1 sm:mb-2 shadow-lg w-10 h-14 sm:w-[60px] sm:h-20 object-cover"
               />
-              <span className="text-xs text-muted-foreground">800 Robux</span>
-              <span className="text-xl font-bold text-amber-400">{available800}</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground text-center">800 Robux</span>
+              <span className="text-lg sm:text-xl font-bold text-amber-400">{available800}</span>
             </div>
 
             {/* 10 USD Card */}
-            <div className="flex flex-col items-center p-3 rounded-lg bg-secondary/50 border border-amber-500/20">
+            <div className="flex flex-col items-center p-2 sm:p-3 rounded-lg bg-secondary/50 border border-amber-500/20">
               <Image
                 src={CARD_IMAGES[1000] || "/placeholder.svg"}
                 alt="10 USD"
                 width={60}
                 height={80}
-                className="rounded-md mb-2 shadow-lg"
+                className="rounded-md mb-1 sm:mb-2 shadow-lg w-10 h-14 sm:w-[60px] sm:h-20 object-cover"
               />
-              <span className="text-xs text-muted-foreground">10 USD</span>
-              <span className="text-xl font-bold text-amber-400">{available1000}</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground text-center">10 USD</span>
+              <span className="text-lg sm:text-xl font-bold text-amber-400">{available1000}</span>
+            </div>
+
+            {/* Steam $5 Card */}
+            <div className="flex flex-col items-center p-2 sm:p-3 rounded-lg bg-secondary/50 border border-sky-500/20">
+              <Image
+                src={CARD_IMAGES.steam5 || "/placeholder.svg"}
+                alt="Steam $5"
+                width={60}
+                height={80}
+                className="rounded-md mb-1 sm:mb-2 shadow-lg w-10 h-14 sm:w-[60px] sm:h-20 object-cover"
+              />
+              <span className="text-[10px] sm:text-xs text-muted-foreground text-center">Steam $5</span>
+              <span className="text-lg sm:text-xl font-bold text-sky-400">{availableSteam5}</span>
+            </div>
+
+            {/* Steam $10 Card */}
+            <div className="flex flex-col items-center p-2 sm:p-3 rounded-lg bg-secondary/50 border border-sky-500/20">
+              <Image
+                src={CARD_IMAGES.steam10 || "/placeholder.svg"}
+                alt="Steam $10"
+                width={60}
+                height={80}
+                className="rounded-md mb-1 sm:mb-2 shadow-lg w-10 h-14 sm:w-[60px] sm:h-20 object-cover"
+              />
+              <span className="text-[10px] sm:text-xs text-muted-foreground text-center">Steam $10</span>
+              <span className="text-lg sm:text-xl font-bold text-sky-400">{availableSteam10}</span>
             </div>
           </div>
         </CardContent>
